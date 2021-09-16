@@ -48,13 +48,9 @@
  * Compilation
  * -----------
  * 
- * Compile with lua.  You must have the development libraries for liblua
- * installed.  Use "pkg-config --list-all" to look for the name of the
- * liblua package.  Then, if the name is, for example, lua-5.2 you can
- * compile like this (all one line):
+ * Compile with lua 5.4.
  * 
- *   gcc -o irtest `pkg-config --cflags lua-5.2` irtest.c `pkg-config
- *   --libs lua-5.2`
+ * May also require the math library (for Lua) with -lm
  */
 
 #include <stdint.h>
@@ -275,6 +271,9 @@ static int note_event(
  *   (4) [Integer] Instrument number
  *   (5) [Integer] Layer number
  * 
+ * The integer types may be anything that Lua can convert into an
+ * integer using lua_tointegerx().
+ * 
  * The callback does not return anything to Lua, except if there is an
  * error, in which case it returns an error message string.
  */
@@ -292,6 +291,8 @@ static int c_callback(lua_State* L) {
   int32_t i_instr = 0;
   int32_t i_layer = 0;
   
+  int retval = 0;
+  
   /* Check parameter */
   if (L == NULL) {
     abort();
@@ -300,88 +301,102 @@ static int c_callback(lua_State* L) {
   /* We should have exactly five arguments on the Lua stack, else fail
    * with error */
   if (lua_gettop(L) != 5) {
-    lua_pushstring(L, "Wrong number of parameters");
+    lua_pushliteral(L, "Wrong number of parameters");
     lua_error(L);
   }
   
-  /* Check the argument types */
-  if ((lua_type(L, 1) != LUA_TNUMBER) ||
-      (lua_type(L, 2) != LUA_TNUMBER) ||
-      (lua_type(L, 3) != LUA_TNUMBER) ||
-      (lua_type(L, 4) != LUA_TNUMBER) ||
-      (lua_type(L, 5) != LUA_TNUMBER)) {
-    lua_pushstring(L, "Wrong parameter types");
+  /* Get all the arguments, attempting to convert to integers */
+  p_start = lua_tointegerx(L, 1, &retval);
+  if (!retval) {
+    lua_pushliteral(L, "Wrong parameter types");
     lua_error(L);
   }
   
-  /* Get all the arguments */
-  p_start = lua_tointeger(L, 1);
-  p_dur = lua_tointeger(L, 2);
-  p_pitch = lua_tointeger(L, 3);
-  p_instr = lua_tointeger(L, 4);
-  p_layer = lua_tointeger(L, 5);
+  p_dur = lua_tointegerx(L, 2, &retval);
+  if (!retval) {
+    lua_pushliteral(L, "Wrong parameter types");
+    lua_error(L);
+  }
+  
+  p_pitch = lua_tointegerx(L, 3, &retval);
+  if (!retval) {
+    lua_pushliteral(L, "Wrong parameter types");
+    lua_error(L);
+  }
+  
+  p_instr = lua_tointegerx(L, 4, &retval);
+  if (!retval) {
+    lua_pushliteral(L, "Wrong parameter types");
+    lua_error(L);
+  }
+  
+  p_layer = lua_tointegerx(L, 5, &retval);
+  if (!retval) {
+    lua_pushliteral(L, "Wrong parameter types");
+    lua_error(L);
+  }
   
   /* Cast all arguments to 32-bit integers */
   if ((p_start >= INT32_MIN) && (p_start <= INT32_MAX)) {
     i_start = (int32_t) p_start;
   } else {
-    lua_pushstring(L, "Parameter out of range");
+    lua_pushliteral(L, "Parameter out of range");
     lua_error(L);
   }
   
   if ((p_dur >= INT32_MIN) && (p_dur <= INT32_MAX)) {
     i_dur = (int32_t) p_dur;
   } else {
-    lua_pushstring(L, "Parameter out of range");
+    lua_pushliteral(L, "Parameter out of range");
     lua_error(L);
   }
   
   if ((p_pitch >= INT32_MIN) && (p_pitch <= INT32_MAX)) {
     i_pitch = (int32_t) p_pitch;
   } else {
-    lua_pushstring(L, "Parameter out of range");
+    lua_pushliteral(L, "Parameter out of range");
     lua_error(L);
   }
   
   if ((p_instr >= INT32_MIN) && (p_instr <= INT32_MAX)) {
     i_instr = (int32_t) p_instr;
   } else {
-    lua_pushstring(L, "Parameter out of range");
+    lua_pushliteral(L, "Parameter out of range");
     lua_error(L);
   }
   
   if ((p_layer >= INT32_MIN) && (p_layer <= INT32_MAX)) {
     i_layer = (int32_t) p_layer;
   } else {
-    lua_pushstring(L, "Parameter out of range");
+    lua_pushliteral(L, "Parameter out of range");
     lua_error(L);
   }
   
   /* Check the ranges of each parameter */
   if (i_start < 0) {
-    lua_pushstring(L, "start parameter out of range");
+    lua_pushliteral(L, "start parameter out of range");
     lua_error(L);
   }
   if (i_dur < 1) {
-    lua_pushstring(L, "dur parameter out of range");
+    lua_pushliteral(L, "dur parameter out of range");
     lua_error(L);
   }
   if ((i_pitch < PITCH_MIN) || (i_pitch > PITCH_MAX)) {
-    lua_pushstring(L, "pitch parameter out of range");
+    lua_pushliteral(L, "pitch parameter out of range");
     lua_error(L);
   }
   if ((i_instr < 1) || (i_instr > INSTR_MAX)) {
-    lua_pushstring(L, "instr parameter out of range");
+    lua_pushliteral(L, "instr parameter out of range");
     lua_error(L);
   }
   if ((i_layer < 1) || (i_layer > RLAYER_MAX)) {
-    lua_pushstring(L, "layer parameter out of range");
+    lua_pushliteral(L, "layer parameter out of range");
     lua_error(L);
   }
   
   /* Now we can call through to the note_event function */
   if (!note_event(i_start, i_dur, i_pitch, i_instr, i_layer)) {
-    lua_pushstring(L, "Note event failed");
+    lua_pushliteral(L, "Note event failed");
     lua_error(L);
   }
   
@@ -566,21 +581,30 @@ int main(int argc, char *argv[]) {
   /* Run the "note" function in the Lua script */
   if (status) {
     /* Push the Lua "note" function onto the interpreter stack */
-    lua_getglobal(L, "note");
+    if (lua_getglobal(L, "note") != LUA_TFUNCTION) {
+      status = 0;
+      fprintf(stderr, "%s: Failed to find defined note function!\n",
+                pModule);
+    }
     
     /* Push all the arguments onto the interpreter stack */
-    lua_pushinteger(L, arg_rate);
-    lua_pushinteger(L, arg_t);
-    lua_pushinteger(L, arg_dur);
-    lua_pushinteger(L, arg_pitch);
-    lua_pushinteger(L, arg_art);
-    lua_pushinteger(L, arg_sect);
-    lua_pushinteger(L, arg_layer);
+    if (status) {
+      lua_pushinteger(L, arg_rate);
+      lua_pushinteger(L, arg_t);
+      lua_pushinteger(L, arg_dur);
+      lua_pushinteger(L, arg_pitch);
+      lua_pushinteger(L, arg_art);
+      lua_pushinteger(L, arg_sect);
+      lua_pushinteger(L, arg_layer);
+    }
     
     /* Call the function */
-    if (lua_pcall(L, 7, 0, 0)) {
-      status = 0;
-      fprintf(stderr, "%s: Failed to call note function!\n", pModule);
+    if (status) {
+      if (lua_pcall(L, 7, 0, 0)) {
+        status = 0;
+        fprintf(stderr, "%s: Failed to call note function!\n",
+                  pModule);
+      }
     }
   }
   
