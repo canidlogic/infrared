@@ -92,6 +92,12 @@ static int32_t m_line = 0;
 static int m_cue_mode = 0;
 
 /*
+ * The last section that was used in a full cue, or -1 if no full cues
+ * have been used yet.
+ */
+static int32_t m_last_sect = -1;
+
+/*
  * Pointer to the Lua interpreter state object, or NULL if not
  * initialized yet.
  */
@@ -104,6 +110,7 @@ static lua_State *m_L = NULL;
 
 /* Prototypes */
 static void print_char(int c);
+static int print_cue(int32_t sect, int32_t cue_num);
 
 static int process_stream(void);
 static int process_cue(unsigned char *pcue);
@@ -179,19 +186,198 @@ static void print_char(int c) {
 /*
  * @@TODO:
  */
-static int process_stream(void) {
+static int print_cue(int32_t sect, int32_t cue_num) {
   /* @@TODO: */
-  fprintf(stderr, "stream\n");
+  printf("[cue %ld %ld]", (long) sect, (long) cue_num);
   return 1;
 }
 
 /*
  * @@TODO:
  */
-static int process_cue(unsigned char *pcue) {
+static int process_stream(void) {
   /* @@TODO: */
-  fprintf(stderr, "cue %s\n", pcue);
+  fprintf(stderr, "[stream]\n");
   return 1;
+}
+
+/*
+ * Process a cue.
+ * 
+ * pcue points to a nul-terminated cue string that begins with a grave
+ * accent and ends with a semicolon.  A fault may happen if this is not
+ * the case.
+ * 
+ * This function will decode the cue, print any error messages to 
+ * stderr if there is a failure, and otherwise will print to standard
+ * output the offset of the cue as a decimal integer.
+ * 
+ * Parameters:
+ * 
+ *   pcue - the cue to decode
+ * 
+ * Return:
+ * 
+ *   non-zero if successful, zero if error
+ */
+static int process_cue(unsigned char *pcue) {
+  
+  int status = 1;
+  int32_t v = 0;
+  int d = 0;
+  
+  int32_t sect = 0;
+  int32_t cue_num = 0;
+  
+  /* Check parameter */
+  if (pcue == NULL) {
+    abort();
+  }
+  
+  /* First character must be a grave accent */
+  if (*pcue != '`') {
+    abort();
+  }
+  
+  /* Skip first character */
+  pcue++;
+  
+  /* Current character must be a decimal digit */
+  if ((*pcue < '0') || (*pcue > '9')) {
+    status = 0;
+    fprintf(stderr, "%s: [Line %ld] Invalid cue format!\n",
+              pModule, (long) m_line);
+  }
+  
+  /* Decode current string of decimal digits */
+  if (status) {
+    v = 0;
+    for( ; (*pcue >= '0') && (*pcue <= '9'); pcue++) {
+      /* Multiply decoded number by 10, watching for overflow */
+      if (v <= INT32_MAX / 10) {
+        v = v * 10;
+      } else {
+        status = 0;
+        fprintf(stderr, "%s: [Line %ld] Cue parameter overflow!\n",
+                  pModule, (long) m_line);
+        break;
+      }
+      
+      /* Get current digit value */
+      d = *pcue - '0';
+      
+      /* Add digit to result, watching for overflow */
+      if (v <= INT32_MAX - d) {
+        v = v + d;
+      } else {
+        status = 0;
+        fprintf(stderr, "%s: [Line %ld] Cue parameter overflow!\n",
+                  pModule, (long) m_line);
+      }
+    }
+  }
+  
+  /* If we are at a dot now, we have a full cue; else, we should be at a
+   * semicolon and we have a partial cue */
+  if (status && (*pcue == '.')) {
+    /* Full cue -- store decoded number as section */
+    sect = v;
+    
+    /* Advance one and we should be on another decimal digit */
+    pcue++;
+    if ((*pcue < '0') || (*pcue > '9')) {
+      status = 0;
+      fprintf(stderr, "%s: [Line %ld] Invalid cue format!\n",
+                pModule, (long) m_line);
+    }
+    
+    /* Decode current string of decimal digits */
+    if (status) {
+      v = 0;
+      for( ; (*pcue >= '0') && (*pcue <= '9'); pcue++) {
+        /* Multiply decoded number by 10, watching for overflow */
+        if (v <= INT32_MAX / 10) {
+          v = v * 10;
+        } else {
+          status = 0;
+          fprintf(stderr, "%s: [Line %ld] Cue parameter overflow!\n",
+                    pModule, (long) m_line);
+          break;
+        }
+        
+        /* Get current digit value */
+        d = *pcue - '0';
+        
+        /* Add digit to result, watching for overflow */
+        if (v <= INT32_MAX - d) {
+          v = v + d;
+        } else {
+          status = 0;
+          fprintf(stderr, "%s: [Line %ld] Cue parameter overflow!\n",
+                    pModule, (long) m_line);
+        }
+      }
+    }
+    
+    /* We should now be on a semicolon */
+    if (status && (*pcue != ';')) {
+      status = 0;
+      fprintf(stderr, "%s: [Line %ld] Invalid cue format!\n",
+                pModule, (long) m_line);
+    }
+    
+    /* There shouldn't be anything after the semicolon */
+    if (status && (pcue[1] != 0)) {
+      abort();
+    }
+    
+    /* If we got here successfully, store recent decoded number as the
+     * cue number and also store the section of this cue in the cache */
+    if (status) {
+      cue_num = v;
+      m_last_sect = sect;
+    }
+    
+  } else if (status && (*pcue == ';')) {
+    /* Partial cue -- check that we have a cached section */
+    if (m_last_sect < 0) {
+      status = 0;
+      fprintf(stderr,
+        "%s: [Line %ld] Can't use partial cue before any full cues!\n",
+        pModule, (long) m_line);
+    }
+    
+    /* Take section from cache and set cue number to the decoded
+     * number */
+    if (status) {
+      sect = m_last_sect;
+      cue_num = v;
+    }
+    
+    /* Make sure nothing after semicolon */
+    if (status && (pcue[1] != 0)) {
+      abort();
+    }
+    
+  } else if (status) {
+    /* Invalid character follows sequence of digits (or nothing after
+     * the sequence of digits) */
+    status = 0;
+    fprintf(stderr, "%s: [Line %ld] Invalid cue format!\n",
+              pModule, (long) m_line);
+  }
+  
+  /* If we got here successfully, print the cue */
+  if (status) {
+    if (!print_cue(sect, cue_num)) {
+      status = 0;
+      fprintf(stderr, "%s: [Line %ld] Cue not found!\n",
+              pModule, (long) m_line);
+    }
+  }
+  
+  /* Return status */
+  return status;
 }
 
 /*
@@ -269,7 +455,7 @@ static int process_line(unsigned char *pstr) {
             /* Turn cue mode on */
             m_cue_mode = 1;
             
-          } else if (pstr[2] == 'c') {
+          } else if (pstr[1] == 'c') {
             /* Turn cue mode off */
             m_cue_mode = 0;
             
@@ -308,8 +494,9 @@ static int process_line(unsigned char *pstr) {
         }
         
         /* We have an actual cue, so store it in the buffer */
-        ccount = 0;
-        for( ; (*pc != ';') && (*pc != '`') && (*pc != 0); pc++) {
+        cbuf[0] = (unsigned char) '`';
+        ccount = 1;
+        for(pc++ ; (*pc != ';') && (*pc != '`') && (*pc != 0); pc++) {
           if (ccount < TMAX_CUE - 1) {
             cbuf[ccount] = *pc;
             ccount++;
