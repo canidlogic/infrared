@@ -51,6 +51,94 @@
 #define TMAX_CUE (256)
 
 /*
+ * Type declarations
+ * -----------------
+ */
+
+/*
+ * CUE structure for storing cue data.
+ */
+typedef struct {
+  
+  /*
+   * The time offset of the cue.
+   */
+  int32_t t;
+  
+  /*
+   * The number of the cue within the section.
+   */
+  int32_t num;
+  
+  /*
+   * The section the cue belongs to.
+   */
+  uint16_t sect;
+  
+} CUE;
+
+/*
+ * CUE_LINK structure with prototype beforehand for self-reference.
+ * 
+ * This is used for building a single-linked list while parsing the NMF
+ * file.
+ */
+struct CUE_LINK_TAG;
+typedef struct CUE_LINK_TAG CUE_LINK;
+struct CUE_LINK_TAG {
+  
+  /*
+   * Pointer to next cue link, or NULL if this is last link.
+   */
+  CUE_LINK *pNext;
+  
+  /*
+   * The cue stored in this link.
+   */
+  CUE c;
+};
+
+/*
+ * RETRO_LINK structure with prototype beforehand for self-reference.
+ * 
+ * This is used for storing the chain of generated Retro note events.
+ */
+struct RETRO_LINK_TAG;
+typedef struct RETRO_LINK_TAG RETRO_LINK;
+struct RETRO_LINK_TAG {
+  
+  /*
+   * Pointer to next Retro event link, or NULL if this is last link.
+   */
+  RETRO_LINK *pNext;
+  
+  /*
+   * Start offset of the event.
+   */
+  int32_t start;
+  
+  /*
+   * Duration of the event.
+   */
+  int32_t dur;
+
+  /*
+   * Instrument for event.
+   */
+  uint16_t instr;
+  
+  /*
+   * Retro layer for event.
+   */
+  uint16_t layer;
+  
+  /*
+   * Pitch for event.
+   */
+  int8_t pitch;
+};
+
+/*
  * Local data
  * ----------
  */
@@ -98,6 +186,32 @@ static int m_cue_mode = 0;
 static int32_t m_last_sect = -1;
 
 /*
+ * The number of cues that have been defined in the NMF file.
+ */
+static int32_t m_cue_count = 0;
+
+/*
+ * The linked list of cues received from the NMF file, in no particular
+ * order.
+ */
+static CUE_LINK *m_pcue_chain = NULL;
+
+/*
+ * Pointer to a sorted array of cues, created on first call to the
+ * print_cue() function.
+ * 
+ * Also has the number of cues, if the pointer is non-NULL.
+ */
+static CUE *m_pcue = NULL;
+static int32_t m_pcue_count = 0;
+
+/*
+ * Pointer to start and end of the Retro event list.
+ */
+static RETRO_LINK *m_rfirst = NULL;
+static RETRO_LINK *m_rlast = NULL;
+
+/*
  * Pointer to the Lua interpreter state object, or NULL if not
  * initialized yet.
  */
@@ -109,17 +223,20 @@ static lua_State *m_L = NULL;
  */
 
 /* Prototypes */
+static int cue_cmp(const void *pa, const void *pb);
+
 static void print_char(int c);
+static void print_dec(int32_t v, int top);
 static int print_cue(int32_t sect, int32_t cue_num);
 
-static int process_stream(void);
+static void process_stream(void);
 static int process_cue(unsigned char *pcue);
 static int process_line(unsigned char *pstr);
 
 static int read_byte(FILE *pIn);
 static int skip_bom(FILE *pIn);
 
-static int cue_event(int32_t t, int32_t sect, int32_t cue);
+static void cue_event(int32_t t, int32_t sect, int32_t cue);
 static void note_event(
     int32_t start,
     int32_t dur,
@@ -138,6 +255,71 @@ static int render_note(
     int32_t art,
     int32_t sect,
     int32_t layer);
+
+/*
+ * Compare two cues.
+ * 
+ * This function matches the interface of the comparison function to
+ * both qsort() and bsearch().  It only compares the sect and num fields
+ * for purposes of ordering and ignores the t field.
+ * 
+ * Parameters:
+ * 
+ *   pa - the first cue structure pointer
+ * 
+ *   pb - the second cue structure pointer
+ * 
+ * Return:
+ * 
+ *   greater than zero, zero, or less than zero as the first structure
+ *   is greater than, equal to, or less than the second structure
+ */
+static int cue_cmp(const void *pa, const void *pb) {
+  
+  const CUE *pca = NULL;
+  const CUE *pcb = NULL;
+  int result = 0;
+  
+  /* Check parameters */
+  if ((pa == NULL) || (pb == NULL)) {
+    abort();
+  }
+  
+  /* Cast to type */
+  pca = (const CUE *) pa;
+  pcb = (const CUE *) pb;
+  
+  /* Compare first by section */
+  if (pca->sect > pcb->sect) {
+    result = 1;
+    
+  } else if (pca->sect < pcb->sect) {
+    result = -1;
+    
+  } else if (pca->sect == pcb->sect) {
+    /* Compare next by number */
+    if (pca->num > pcb->num) {
+      result = 1;
+      
+    } else if (pca->num < pcb->num) {
+      result = -1;
+      
+    } else if (pca->num == pcb->num) {
+      result = 0;
+      
+    } else {
+      /* Shouldn't happen */
+      abort();
+    }
+    
+  } else {
+    /* Shouldn't happen */
+    abort();
+  }
+  
+  /* Return result */
+  return result;
+}
 
 /*
  * Print a character to output.
@@ -184,21 +366,176 @@ static void print_char(int c) {
 }
 
 /*
- * @@TODO:
+ * Recursively print a decimal number.
+ * 
+ * Set top to non-zero only for the first call, or a recursive call
+ * after printing a sign.
+ * 
+ * Fault if the least negative value.
+ * 
+ * Parameters:
+ * 
+ *   v - the value to print
+ * 
+ *   top - non-zero if top-level call, zero if recursive call
  */
-static int print_cue(int32_t sect, int32_t cue_num) {
-  /* @@TODO: */
-  printf("[cue %ld %ld]", (long) sect, (long) cue_num);
-  return 1;
+static void print_dec(int32_t v, int top) {
+  
+  /* Check parameters */
+  if (v <= INT32_MIN) {
+    abort();
+  }
+  
+  /* If value is negative, print negative sign and then recursively
+   * print the positive value */
+  if (v < 0) {
+    print_char('-');
+    print_dec(-(v), 1);
+    return;
+  }
+  
+  /* If value is zero, print zero if top-level call, and then return in
+   * all cases */
+  if (v == 0) {
+    if (top) {
+      print_char('0');
+    }
+    return;
+  }
+  
+  /* Otherwise, if value less than 10, print it and return */
+  if (v < 10) {
+    print_char('0' + ((int) v));
+    return;
+  }
+  
+  /* Otherwise, recursive solution */
+  print_dec(v / 10, 0);
+  print_char('0' + ((int) (v % 10)));
 }
 
 /*
- * @@TODO:
+ * Look up and print a given cue.
+ * 
+ * This generates the sorted cue table if not already generated.
+ * 
+ * Error messages printed to stderr.
+ * 
+ * Parameters:
+ * 
+ *   sect - the section of the cue
+ * 
+ *   cue_num - the number of the cue
+ * 
+ * Return:
+ * 
+ *   non-zero if successful, zero if error
  */
-static int process_stream(void) {
-  /* @@TODO: */
-  fprintf(stderr, "[stream]\n");
-  return 1;
+static int print_cue(int32_t sect, int32_t cue_num) {
+  
+  int status = 1;
+  CUE_LINK *pl = NULL;
+  int32_t i = 0;
+  CUE *pc = NULL;
+  CUE c;
+  
+  /* Check sect parameter */
+  if ((sect < 0) || (sect >= NMF_MAXSECT)) {
+    abort();
+  }
+  
+  /* Initialize structures */
+  memset(&c, 0, sizeof(CUE));
+  
+  /* Generate the sorted cue table if necessary */
+  if ((m_pcue == NULL) && (m_cue_count > 0)) {
+    
+    /* First of all, allocate space for the table using the cue count */
+    m_pcue = (CUE *) calloc((size_t) m_cue_count, sizeof(CUE));
+    if (m_pcue == NULL) {
+      abort();
+    }
+    
+    /* Go through the cue link chain and copy all to the cue table */
+    i = 0;
+    for(pl = m_pcue_chain; pl != NULL; pl = pl->pNext) {
+      memcpy(&(m_pcue[i]), &(pl->c), sizeof(CUE));
+      i++;
+    }
+    
+    /* Copy the count to the other count field */
+    m_pcue_count = m_cue_count;
+    
+    /* If more than one cue, sort the table and check for duplicates */
+    if (m_cue_count > 1) {
+      qsort(m_pcue, (size_t) m_cue_count, sizeof(CUE), &cue_cmp);
+      for(i = 1; i < m_cue_count; i++) {
+        if (cue_cmp(&(m_pcue[i]), &(m_pcue[i - 1])) == 0) {
+          status = 0;
+          fprintf(stderr, "%s: Duplicate cues found!\n", pModule);
+          break;
+        }
+      }
+    }
+  }
+  
+  /* If we have a sorted table, look up the cue */
+  if (status && (m_pcue != NULL)) {
+    c.sect = (uint16_t) sect;
+    c.num = cue_num;
+    pc = bsearch(&c,
+          m_pcue, (size_t) m_pcue_count, sizeof(CUE), &cue_cmp);
+  }
+  
+  /* Error if we didn't find a matching cue */
+  if (status && (pc == NULL)) {
+    status = 0;
+    fprintf(stderr, "%s: [Line %ld] Failed to find matching cue!\n",
+              pModule, (long) m_line);
+  }
+  
+  /* If we got here successfully, print the found cue time */
+  if (status) {
+    print_dec(pc->t, 1);
+  }
+  
+  /* Return status */
+  return status;
+}
+
+/*
+ * Output all the Retro note events.
+ */
+static void process_stream(void) {
+  
+  RETRO_LINK *pl = NULL;
+  
+  /* Go through all note events */
+  for(pl = m_rfirst; pl != NULL; pl = pl->pNext) {
+    /* First comes the time */
+    print_dec(pl->start, 1);
+    
+    /* Next the duration */
+    print_char(' ');
+    print_dec(pl->dur, 1);
+    
+    /* Next the pitch */
+    print_char(' ');
+    print_dec(pl->pitch, 1);
+    
+    /* Next the instrument */
+    print_char(' ');
+    print_dec(pl->instr, 1);
+    
+    /* Next the layer */
+    print_char(' ');
+    print_dec(pl->layer, 1);
+    
+    /* Finally the note operation followed by end of line */
+    print_char(' ');
+    print_char('n');
+    print_char('\n');
+  }
 }
 
 /*
@@ -371,8 +708,6 @@ static int process_cue(unsigned char *pcue) {
   if (status) {
     if (!print_cue(sect, cue_num)) {
       status = 0;
-      fprintf(stderr, "%s: [Line %ld] Cue not found!\n",
-              pModule, (long) m_line);
     }
   }
   
@@ -447,9 +782,7 @@ static int process_line(unsigned char *pstr) {
         if (status) {
           if (pstr[1] == 'S') {
             /* Stream command */
-            if (!process_stream()) {
-              status = 0;
-            }
+            process_stream();
             
           } else if (pstr[1] == 'C') {
             /* Turn cue mode on */
@@ -692,25 +1025,49 @@ static int skip_bom(FILE *pIn) {
 /*
  * Called for each cue event that is encountered in the NMF file.
  * 
- * Error messages are reported to stderr.
- * 
  * Parameters:
  * 
  *   t - the sample offset of the cue, must be greater than or equal to
  *   zero
  * 
  *   sect - the section number of the cue, must be greater than or equal
- *   to zero
+ *   to zero, and less than NMF_MAXSECT
  * 
  *   cue - the cue number, must be greater than or equal to zero
- * 
- * Return:
- * 
- *   non-zero if successful, zero if error
  */
-static int cue_event(int32_t t, int32_t sect, int32_t cue) {
-  /* @@TODO: */
-  return 1;
+static void cue_event(int32_t t, int32_t sect, int32_t cue) {
+  
+  CUE_LINK *pl = NULL;
+  
+  /* Check parameters */
+  if ((t < 0) || (sect < 0) || (sect >= NMF_MAXSECT) || (cue < 0)) {
+    abort();
+  }
+  
+  /* Allocate new cue link structure */
+  pl = (CUE_LINK *) malloc(sizeof(CUE_LINK));
+  if (pl == NULL) {
+    abort();
+  }
+  memset(pl, 0, sizeof(CUE_LINK));
+  
+  /* Set next pointer to current chain root (which might be NULL) */
+  pl->pNext = m_pcue_chain;
+  
+  /* Store the data in the cue */
+  (pl->c).t = t;
+  (pl->c).num = cue;
+  (pl->c).sect = (uint16_t) sect;
+  
+  /* Add the new cue link to the start of the chain */
+  m_pcue_chain = pl;
+  
+  /* Increment the cue link counter */
+  if (m_cue_count < INT32_MAX) {
+    m_cue_count++;
+  } else {
+    abort();  /* counter overflow */
+  }
 }
 
 /*
@@ -739,7 +1096,43 @@ static void note_event(
     int32_t instr,
     int32_t layer) {
   
-  /* @@TODO: */
+  RETRO_LINK *pl = NULL;
+  
+  /* Check parameters */
+  if ((start < 0) || (dur < 1) ||
+      (pitch < NMF_MINPITCH) || (pitch > NMF_MAXPITCH) ||
+      (instr < 1) || (instr > INSTR_MAX) ||
+      (layer < 1) || (layer > RLAYER_MAX)) {
+    abort();
+  }
+  
+  /* Allocate new structure for the event */
+  pl = (RETRO_LINK *) malloc(sizeof(RETRO_LINK));
+  if (pl == NULL) {
+    abort();
+  }
+  memset(pl, 0, sizeof(RETRO_LINK));
+  
+  /* Copy parameters into structure */
+  pl->start = start;
+  pl->dur = dur;
+  pl->instr = (uint16_t) instr;
+  pl->layer = (uint16_t) layer;
+  pl->pitch = (int8_t) pitch;
+  
+  /* Link into event list */
+  if (m_rlast == NULL) {
+    /* List is empty, so set this as first and only event */
+    pl->pNext = NULL;
+    m_rfirst = pl;
+    m_rlast = pl;
+    
+  } else {
+    /* List not empty, so append to end of list */
+    pl->pNext = NULL;
+    m_rlast->pNext = pl;
+    m_rlast = pl;
+  }
 }
 
 /*
@@ -1238,9 +1631,7 @@ int main(int argc, char *argv[]) {
           cue = cue | (((int32_t) n.art) << 16);
           
           /* Report the cue */
-          if (!cue_event(n.t, n.sect, cue)) {
-            status = 0;
-          }
+          cue_event(n.t, n.sect, cue);
         }
       
       } else if (n.dur > 0) {
