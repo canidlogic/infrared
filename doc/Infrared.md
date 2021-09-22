@@ -1,5 +1,14 @@
 # Infrared program documentation
 
+- &#x200b;1. [Introduction](#mds1)
+- &#x200b;2. [Syntax](#mds2)
+- &#x200b;3. [Retro template file](#mds3)
+  - &#x200b;3.1 [Template command lines](#mds3p1)
+  - &#x200b;3.2 [Stream commands](#mds3p2)
+  - &#x200b;3.3 [Cue mode commands](#mds3p3)
+  - &#x200b;3.4 [Interpretation of cues](#mds3p4)
+- &#x200b;4. [Compilation](#mds4)
+
 ## <span id="mds1">1. Introduction</span>
 
 The Infrared program is a bridge between the [Noir Music Format](https://www.purl.org/canidtech/r/libnmf) (NMF) and the [Retro](https://www.purl.org/canidtech/r/retro) synthesizer.
