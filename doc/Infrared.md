@@ -7,6 +7,7 @@
   - &#x200b;3.2 [Stream commands](#mds3p2)
   - &#x200b;3.3 [Cue mode commands](#mds3p3)
   - &#x200b;3.4 [Interpretation of cues](#mds3p4)
+  - &#x200b;3.5 [Rate and frame command](#mds3p5)
 - &#x200b;4. [Compilation](#mds4)
 
 ## <span id="mds1">1. Introduction</span>
@@ -129,6 +130,26 @@ There is also a _partial cue_ which has the following format:
 3. Semicolon `;`
 
 Partial cues may only occur after at least one full cue has occurred somewhere before them.  The section number of the partial cue is automatically taken to be the section number that was in the last full cue.  The memory of the last cue is not affected by turning cue mode on and off.
+
+### <span id="mds3p5">3.5 Rate and frame command</span>
+
+Infrared provides a template command that handles both the `%rate` and `%frame` commands in the heaer of a Retro synthesis script.  Using this template command allows for the Retro template file to be independent of any particular sample rate.  The sample rate from the NMF file will be used for the `%rate` command and Infrared will convert frame durations from quantities given in milliseconds in the template to sample counts in the generated synthesis script.
+
+To use this feature, include a template command line that begins with grave accent followed by an uppercase `R`.  This template command can be included at most once in a template or an error occurs.  The template command will be replaced in output with an appropriate `%rate` command followed by an appropriate `%frame` command.
+
+The syntax of the rate and frame template command is as follows:
+
+1. Grave accent
+2. Uppercase `R`
+3. Zero or more spaces and tabs
+4. One or more decimal digits
+5. Zero or more spaces and tabs
+6. Comma `,`
+7. Zero or more spaces and tabs
+8. One or more decimal digits
+9. Zero or more spaces and tabs
+
+The first sequence of decimal digits decodes to an unsigned integer quantity that gives the number of milliseconds of silence written before the synthesized sound begins.  The second sequence of decimal digits decodes to an unsigned integer quantity that gives the number of milliseconds of silence written after the synthesized sound ends.  Either or both quantities may be zero.
 
 ## <span id="mds4">4. Compilation</span>
 
