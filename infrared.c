@@ -151,6 +151,11 @@ struct RETRO_LINK_TAG {
 static const char *pModule = NULL;
 
 /*
+ * The sampling rate of the NMF file, or zero if not determined yet.
+ */
+static int32_t m_rate = 0;
+
+/*
  * The CR+LF flag.
  * 
  * This is set during the program entrypoint.  If it is zero, then line
@@ -227,10 +232,12 @@ static int cue_cmp(const void *pa, const void *pb);
 
 static void print_char(int c);
 static void print_dec(int32_t v, int top);
+static void print_str(const char *pstr);
 static int print_cue(int32_t sect, int32_t cue_num);
 
 static void process_stream(void);
 static int process_cue(unsigned char *pcue);
+static int process_rfcom(unsigned char *pstr);
 static int process_line(unsigned char *pstr);
 
 static int read_byte(FILE *pIn);
@@ -412,6 +419,31 @@ static void print_dec(int32_t v, int top) {
   /* Otherwise, recursive solution */
   print_dec(v / 10, 0);
   print_char('0' + ((int) (v % 10)));
+}
+
+/*
+ * Print a nul-terminated string.
+ * 
+ * Parameters:
+ * 
+ *   pstr - the string to print
+ */
+static void print_str(const char *pstr) {
+  
+  const unsigned char *pc = NULL;
+  
+  /* Check parameter */
+  if (pstr == NULL) {
+    abort();
+  }
+  
+  /* Cast to unsigned */
+  pc = (const unsigned char *) pstr;
+  
+  /* Print all characters */
+  for( ; *pc != 0; pc++) {
+    print_char(*pc);
+  }
 }
 
 /*
@@ -716,6 +748,237 @@ static int process_cue(unsigned char *pcue) {
 }
 
 /*
+ * Process a rate and frame template command line.
+ * 
+ * The m_rate variable must be set with the sampling rate or a fault
+ * occurs.
+ * 
+ * pstr points to a nul-terminated line of text to process.  It must
+ * begin with a grave accent followed by an uppercase R or a fault
+ * occurs.
+ * 
+ * Errors are reported to stderr.
+ * 
+ * Parameters:
+ * 
+ *   pstr - the line to process
+ * 
+ * Return:
+ * 
+ *   non-zero if successful, zero if error
+ */
+static int process_rfcom(unsigned char *pstr) {
+  
+  int status = 1;
+  int32_t v = 0;
+  int32_t frame_before = 0;
+  int32_t frame_after = 0;
+  int d = 0;
+  
+  /* Check state */
+  if (m_rate < 1) {
+    abort();
+  }
+  
+  /* Check parameter */
+  if (pstr == NULL) {
+    abort();
+  }
+  
+  /* Check that first characters are `R and advance over them */
+  if ((pstr[0] != '`') || (pstr[1] != 'R')) {
+    abort();
+  }
+  pstr += 2;
+  
+  /* Skip any spaces and tabs */
+  for( ; (*pstr == ' ') || (*pstr == '\t'); pstr++);
+  
+  /* Make sure we have at least one decimal digit */
+  if ((*pstr < '0') || (*pstr > '9')) {
+    status = 0;
+    fprintf(stderr, "%s: [Line %ld] Invalid rate/frame command!\n",
+              pModule, (long) m_line);
+  }
+  
+  /* Parse the decimal value */
+  if (status) {
+    v = 0;
+    for( ; (*pstr >= '0') && (*pstr <= '9'); pstr++) {
+      
+      /* Multiply value by 10, watching for overflow */
+      if (v <= INT32_MAX / 10) {
+        v = v * 10;
+      } else {
+        status = 0;
+        fprintf(stderr, "%s: [Line %ld] Parameter overflow!\n",
+                  pModule, (long) m_line);
+      }
+      
+      /* Get current digit value */
+      if (status) {
+        d = *pstr - '0';
+      }
+      
+      /* Add current digit to value, watching for overflow */
+      if (status) {
+        if (v <= INT32_MAX - d) {
+          v = v + ((int32_t) d);
+        } else {
+          status = 0;
+          fprintf(stderr, "%s: [Line %ld] Parameter overflow!\n",
+                    pModule, (long) m_line);
+        }
+      }
+      
+      /* Leave loop if error */
+      if (!status) {
+        break;
+      }
+    }
+  }
+  
+  /* Store frame before value */
+  if (status) {
+    frame_before = v;
+  }
+  
+  /* Skip any spaces and tabs */
+  if (status) {
+    for( ; (*pstr == ' ') || (*pstr == '\t'); pstr++);
+  }
+  
+  /* Make sure we have a comma and skip it */
+  if (status) {
+    if (*pstr == ',') {
+      pstr++;
+    } else {
+      status = 0;
+      fprintf(stderr, "%s: [Line %ld] Invalid rate/frame command!\n",
+                pModule, (long) m_line);
+    }
+  }
+  
+  /* Skip any spaces and tabs */
+  if (status) {
+    for( ; (*pstr == ' ') || (*pstr == '\t'); pstr++);
+  }
+  
+  /* Make sure we have at least one decimal digit */
+  if (status) {
+    if ((*pstr < '0') || (*pstr > '9')) {
+      status = 0;
+      fprintf(stderr, "%s: [Line %ld] Invalid rate/frame command!\n",
+                pModule, (long) m_line);
+    }
+  }
+  
+  /* Parse the decimal value */
+  if (status) {
+    v = 0;
+    for( ; (*pstr >= '0') && (*pstr <= '9'); pstr++) {
+      
+      /* Multiply value by 10, watching for overflow */
+      if (v <= INT32_MAX / 10) {
+        v = v * 10;
+      } else {
+        status = 0;
+        fprintf(stderr, "%s: [Line %ld] Parameter overflow!\n",
+                  pModule, (long) m_line);
+      }
+      
+      /* Get current digit value */
+      if (status) {
+        d = *pstr - '0';
+      }
+      
+      /* Add current digit to value, watching for overflow */
+      if (status) {
+        if (v <= INT32_MAX - d) {
+          v = v + ((int32_t) d);
+        } else {
+          status = 0;
+          fprintf(stderr, "%s: [Line %ld] Parameter overflow!\n",
+                    pModule, (long) m_line);
+        }
+      }
+      
+      /* Leave loop if error */
+      if (!status) {
+        break;
+      }
+    }
+  }
+  
+  /* Store frame after value */
+  if (status) {
+    frame_after = v;
+  }
+  
+  /* Skip any spaces and tabs */
+  if (status) {
+    for( ; (*pstr == ' ') || (*pstr == '\t'); pstr++);
+  }
+  
+  /* Make sure nothing more on line */
+  if (status) {
+    if (*pstr != 0) {
+      status = 0;
+      fprintf(stderr, "%s: [Line %ld] Invalid rate/frame command!\n",
+                pModule, (long) m_line);
+    }
+  }
+  
+  /* Multiply frame values by sample rate, watching for overflow */
+  if (status) {
+    if (frame_before <= INT32_MAX / m_rate) {
+      frame_before *= m_rate;
+    } else {
+      status = 0;
+      fprintf(stderr, "%s: [Line %ld] Parameter overflow!\n",
+                pModule, (long) m_line);
+    }
+  }
+  
+  if (status) {
+    if (frame_after <= INT32_MAX / m_rate) {
+      frame_after *= m_rate;
+    } else {
+      status = 0;
+      fprintf(stderr, "%s: [Line %ld] Parameter overflow!\n",
+                pModule, (long) m_line);
+    }
+  }
+  
+  /* Divide frame values by 1000 to get the sample counts */
+  if (status) {
+    frame_before = frame_before / 1000;
+    frame_after = frame_after / 1000;
+  }
+  
+  /* Print the rate command */
+  if (status) {
+    print_str("%rate ");
+    print_dec(m_rate, 1);
+    print_char(';');
+    print_char('\n');
+  }
+  
+  /* Print the frame command */
+  if (status) {
+    print_str("%frame ");
+    print_dec(frame_before, 1);
+    print_char(' ');
+    print_dec(frame_after, 1);
+    print_char(';');
+    print_char('\n');
+  }
+  
+  /* Return status */
+  return status;
+}
+
+/*
  * Process a line of the template file.
  * 
  * pstr points to a nul-terminated line of text to process.  The line
@@ -764,17 +1027,19 @@ static int process_line(unsigned char *pstr) {
         
       } else {
         /* Template command that is neither a comment nor an escape --
-         * all currently supported template commands have only a single
-         * character after the grave accent, so make sure that anything
-         * after the second character is either space or horizontal
-         * tab */
-        for(pc = &(pstr[2]); *pc != 0; pc++) {
-          if ((*pc != ' ') && (*pc != '\t')) {
-            status = 0;
-            fprintf(stderr,
-                      "%s: [Line %ld] Invalid template command!\n",
-                      pModule, (long) m_line);
-            break;
+         * all currently supported template commands except R have only
+         * a single character after the grave accent, so make sure that
+         * anything after the second character is either space or
+         * horizontal tab, except for the R command */
+        if (pstr[1] != 'R') {
+          for(pc = &(pstr[2]); *pc != 0; pc++) {
+            if ((*pc != ' ') && (*pc != '\t')) {
+              status = 0;
+              fprintf(stderr,
+                        "%s: [Line %ld] Invalid template command!\n",
+                        pModule, (long) m_line);
+              break;
+            }
           }
         }
         
@@ -791,6 +1056,12 @@ static int process_line(unsigned char *pstr) {
           } else if (pstr[1] == 'c') {
             /* Turn cue mode off */
             m_cue_mode = 0;
+          
+          } else if (pstr[1] == 'R') {
+            /* Rate and frame command -- process the line */
+            if (!process_rfcom(pstr)) {
+              status = 0;
+            }
             
           } else {
             /* Unrecognized command */
@@ -1593,6 +1864,11 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "%s: NMF file must have a fixed quantum basis!\n",
                 pModule);
     }
+  }
+  
+  /* Save the sampling rate */
+  if (status) {
+    m_rate = rate;
   }
   
   /* Initialize Lua interpreter and load note rendering script; error
