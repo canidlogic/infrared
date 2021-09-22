@@ -10,7 +10,7 @@ This note rendering script must declare a function `note` that takes the followi
 
 1. Sampling rate in Hz
 2. Sample offset at which note starts
-3. Duration of note in samples
+3. Duration of note in samples, or grace note offset
 4. Pitch of the note (see below)
 5. NMF articulation
 6. NMF section that note belongs to
@@ -18,7 +18,7 @@ This note rendering script must declare a function `note` that takes the followi
 
 Parameter (7) refers to the layer within the NMF file, __not__ the layer within the output Retro script.  Layers mean different things in NMF and Retro.
 
-The sample offset is always zero or greater, and the duration is always greater than zero.  NMF cue events with a duration zero are never passed through to the note renderer, and Infrared does not allow grace notes with negative durations, either.
+The sample offset is always zero or greater, and the duration is either greater than or less than zero.  Durations less than zero represent grace note offsets that come before the main beat.  Durations greater than zero represent note durations in samples.  NMF cue events with a duration zero are never passed through to the note renderer.
 
 The pitch of the note refers to the number of equal-tempered semitones away from middle C, with positive values being higher in pitch and negative values being lower in pitch.  The range is that of an 88-key piano keyboard, which results in a valid range of [-39, 48].
 
@@ -36,16 +36,18 @@ Infrared defines a Lua function named `retro_event` that can be used to output R
 4. Retro instrument number
 5. Retro layer
 
-The first three parameters have the same interpretation as for the `note` function described in the previous section.  The fourth and fifth parameters have minimum values of one and should refer to instruments and layers that will be defined in the Retro synthesis script.
+The first three parameters have the same interpretation as for the `note` function described in the previous section.  However, negative durations are __not__ allowed here.  The note rendering function must convert grace notes to regular notes with a proper sample offset and positive duration before passing them through.  The fourth and fifth parameters have minimum values of one and should refer to instruments and layers that will be defined in the Retro synthesis script.
 
 There does not need to be a one-to-one correspondence between NMF notes and generated Retro note events.  If the `note` function never calls `retro_event` for a particular invocation, then the NMF event will be filtered out.  If the `note` function calls `retro_event` once for a particular invocation, it will transform an NMF note into a Retro note event.  The `note` function can even call `retro_event` multiple times in a single invocation to generate multiple Retro note events for a single NMF note event.
 
 ## Example note rendering script
 
-Here is a simple Lua note rendering script that just passes the `t` `dur` and `pitch` parameters through from NMF to Retro, and sets all the Retro instruments and layers to one:
+Here is a simple Lua note rendering script that just passes the `t` `dur` and `pitch` parameters through from NMF to Retro, sets all the Retro instruments and layers to one, and ignores any grace notes:
 
     function note(rate, t, dur, pitch, art, sect, layer)
-      retro_event(t, dur, pitch, 1, 1)
+      if dur > 0 then
+        retro_event(t, dur, pitch, 1, 1)
+      end
     end
 
 You can test how note rendering scripts work with the `irtest` utility program.  See that program source code for further information.
