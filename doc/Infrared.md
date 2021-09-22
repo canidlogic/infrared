@@ -32,14 +32,13 @@ If the optional `-crlf` option is present, then Infrared will use CR+LF line bre
 
 `[template]` is the path to a Retro template file.  The format of this template file is described in &sect;3 [Retro template file](#mds3).
 
-`[nmf]` is the path to an NMF file that defines the notes and cues in the composition.  Infrared only accepts NMF files that have the following restrictions:
+`[nmf]` is the path to an NMF file that defines the notes and cues in the composition.  Infrared only accepts NMF files that have the following restriction:
 
 - Quantum basis must be one of the following:
   - 44,100 quanta per second, OR
   - 48,000 quanta per second
-- No grace notes with negative duration values
 
-See [libnmf](https://www.purl.org/canidtech/r/libnmf) for more about the NMF format, and see [nmftools](https://www.purl.org/canidtech/r/nmftools) for utility programs that can transform NMF files to comply with the restrictions given above.
+See [libnmf](https://www.purl.org/canidtech/r/libnmf) for more about the NMF format, and see [Halogen](https://www.purl.org/canidtech/r/halogen) for how to transform NMF files with 96 quanta per quarter note into one of the fixed quantum bases above.
 
 `[note_script]` is the path to a [Lua](https://www.lua.org/) script that contains a note rendering routine.  This specifies how a sequence of NMF notes is transformed into a sequence of Retro note events.  See `NoteRendering.md` for the specifics of how this Lua script works.
 
