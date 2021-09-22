@@ -18,7 +18,7 @@
  * greater.
  * 
  * [dur] is the duration of the note, in samples.  Must be greater than
- * zero.
+ * zero or less than zero (for a grace note offset).
  * 
  * [pitch] is the pitch of the note.  Zero is middle C, positive values
  * step up by equal-tempered semitones (half steps), and negative values
@@ -510,7 +510,7 @@ int main(int argc, char *argv[]) {
     status = 0;
     fprintf(stderr, "%s: t argument out of range!\n", pModule);
   }
-  if (status && (arg_dur < 1)) {
+  if (status && (arg_dur == 0)) {
     status = 0;
     fprintf(stderr, "%s: dur argument out of range!\n", pModule);
   }
