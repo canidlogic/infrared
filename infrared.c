@@ -1673,7 +1673,8 @@ static void free_lua(void) {
  *   t - the starting sample offset of the note, which must be zero or
  *   greater
  * 
- *   dur - the duration of the note, which must be greater than zero
+ *   dur - the duration of the note, which must be greater than zero or
+ *   less than zero
  * 
  *   pitch - the pitch of the note, in [NMF_MINPITCH, NMF_MAXPITCH]
  * 
@@ -1707,7 +1708,7 @@ static int render_note(
   if ((rate != 44100) && (rate != 48000)) {
     abort();
   }
-  if ((t < 0) || (dur < 1)) {
+  if ((t < 0) || (dur == 0)) {
     abort();
   }
   if ((pitch < NMF_MINPITCH) || (pitch > NMF_MAXPITCH)) {
@@ -1879,9 +1880,9 @@ int main(int argc, char *argv[]) {
     }
   }
   
-  /* Go through all NMF notes, make sure there are no grace notes with
-   * negative duration, decode any cue events and route to cue_event(),
-   * and render all notes with the Lua note rendering script */
+  /* Go through all NMF notes, decode any cue events and route to
+   * cue_event(), and render all notes with the Lua note rendering
+   * script */
   if (status) {
     /* Get note count */
     count = nmf_notes(pNMF);
@@ -1892,14 +1893,7 @@ int main(int argc, char *argv[]) {
       nmf_get(pNMF, x, &n);
       
       /* Check note type by duration */
-      if (n.dur < 0) {
-        /* Grace note, which is not allowed by infrared, so raise
-         * error */
-        status = 0;
-        fprintf(stderr, "%s: No grace notes allowed in NMF data!\n",
-                  pModule);
-      
-      } else if (n.dur == 0) {
+      if (n.dur == 0) {
         /* Cue note if pitch is zero; otherwise, ignore event */
         if (n.pitch == 0) {
           /* Decode the cue number */
@@ -1910,8 +1904,8 @@ int main(int argc, char *argv[]) {
           cue_event(n.t, n.sect, cue);
         }
       
-      } else if (n.dur > 0) {
-        /* Regular note, so render with the Lua script */
+      } else {
+        /* Regular note or grace note, so render with the Lua script */
         if (!render_note(
                 rate,
                 n.t,
@@ -1922,10 +1916,6 @@ int main(int argc, char *argv[]) {
                 ((int32_t) n.layer_i) + 1)) {
           status = 0;
         }
-        
-      } else {
-        /* Shouldn't happen */
-        abort();
       }
       
       /* Leave loop if error */
