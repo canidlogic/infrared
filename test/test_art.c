@@ -180,5 +180,6 @@ int main(int argc, char *argv[]) {
   
   printf("Test performance duration     : %ld\n", (long) result);
   
+  art_shutdown();
   return EXIT_SUCCESS;
 }
