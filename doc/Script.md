@@ -28,7 +28,7 @@ The _graph_ data type is an object that tracks the change of a parameter value o
 
 ### Set
 
-The _set_ data type is an object that stores a set of unique integer values that are each zero or greater.  This is used in pipelines for selecting specific note events.  See the separate documentation about note rendering for a specific definition of set objects.  Set objects are mutable.
+The _set_ data type is an object that stores a set of unique integer values that are each zero or greater.  This is used in pipelines for selecting specific note events.  See the separate documentation about note rendering for a specific definition of set objects.  Set objects are immutable after definition.
 
 ### Articulation
 
