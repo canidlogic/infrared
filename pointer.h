@@ -267,10 +267,6 @@ int pointer_isHeader(POINTER *pp);
  *    3 | Subquantum  1, start-of-moment
  *                    ...
  * 
- * This time scale does NOT take into account window settings.  In other
- * words, no window-before value is added to the absolute subquantum
- * offset.
- * 
  * The given lnum should be from the Shastina parser, and it is used for
  * error reports if necessary.
  * 
