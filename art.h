@@ -19,27 +19,6 @@
 #include <stdint.h>
 
 /*
- * Constants
- * =========
- */
-
-/*
- * MIDI velocity constants.
- * 
- * The maximum MIDI velocity is always ART_VEL_MAX.  The minimum MIDI
- * velocity is either 0 or 1, depending on whether 0 is reserved for a
- * special note-off condition.  For articulations, the minimum is always
- * the value of 1.
- * 
- * The default or "neutral" MIDI velocity is ART_VEL_NEUTRAL.
- * 
- * The MIDI specification recommends that velocities are performed on a
- * logarithmic scale.
- */
-#define ART_VEL_NEUTRAL ( 64)
-#define ART_VEL_MAX     (127)
-
-/*
  * Type declarations
  * =================
  */
@@ -59,10 +38,6 @@ typedef struct ART_TAG ART;
 
 /*
  * Create a new articulation object with the given parameter values.
- * 
- * vel is the MIDI note-on velocity to assign to all notes using this
- * articulation.  It must be in range 1 to ART_VEL_MAX, inclusive.  The
- * value ART_VEL_NEUTRAL is considered neutral, neither loud nor soft.
  * 
  * scale_num and scale_denom are the numerator and denominator of the
  * scaling factor to multiply to notated durations to begin the
@@ -89,17 +64,10 @@ typedef struct ART_TAG ART;
  * reduced by the gap.  Finally, the performance duration is lengthened
  * to a value of one if it is less than one.
  * 
- * The scaling factor, bumper, and gap are only applied to measured
- * (non-grace) notes.  All articulations must have valid values for
- * these fields, but unmeasured grace notes will only make use of the
- * velocity field.
- * 
  * The given lnum should be from the Shastina parser, and it is used for
  * error reports if necessary.
  * 
  * Parameters:
- * 
- *   vel - the MIDI velocity
  * 
  *   scale_num - the numerator of the scaling factor
  * 
@@ -113,7 +81,6 @@ typedef struct ART_TAG ART;
  *   lnum - the Shastina line number for diagnostic messages
  */
 ART *art_new(
-    int32_t vel,
     int32_t scale_num,
     int32_t scale_denom,
     int32_t bumper,
@@ -126,19 +93,6 @@ ART *art_new(
  * functions, except for art_shutdown().
  */
 void art_shutdown(void);
-
-/*
- * Get the MIDI note-on velocity of the given articulation.
- * 
- * Parameters:
- * 
- *   pa - the articulation
- * 
- * Return:
- * 
- *   the MIDI velocity, in range 1 to ART_VEL_MAX, inclusive
- */
-int art_velocity(ART *pa);
 
 /*
  * Transform a measured NMF duration in quanta into a performance

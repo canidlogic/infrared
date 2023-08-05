@@ -7,7 +7,7 @@
  * Syntax
  * ------
  * 
- *   test_art [vel] [scale_num] [scale_denom] [bumper] [gap] [test]
+ *   test_art [scale_num] [scale_denom] [bumper] [gap] [test]
  * 
  * All parameters except the last are signed integers that are used to
  * construct an articulation object.
@@ -125,7 +125,6 @@ static int32_t parseInt(const char *pstr) {
 
 int main(int argc, char *argv[]) {
   
-  int32_t arg_vel = 0;
   int32_t arg_scale_num = 0;
   int32_t arg_scale_denom = 0;
   int32_t arg_bumper = 0;
@@ -138,22 +137,20 @@ int main(int argc, char *argv[]) {
   
   diagnostic_startup(argc, argv, "test_art");
   
-  if (argc != 7) {
+  if (argc != 6) {
     raiseErr(__LINE__, "Wrong number of program arguments");
   }
   
-  arg_vel         = parseInt(argv[1]);
-  arg_scale_num   = parseInt(argv[2]);
-  arg_scale_denom = parseInt(argv[3]);
-  arg_bumper      = parseInt(argv[4]);
-  arg_gap         = parseInt(argv[5]);
-  arg_test        = parseInt(argv[6]);
+  arg_scale_num   = parseInt(argv[1]);
+  arg_scale_denom = parseInt(argv[2]);
+  arg_bumper      = parseInt(argv[3]);
+  arg_gap         = parseInt(argv[4]);
+  arg_test        = parseInt(argv[5]);
   
   printf("Articulation parameters\n");
   printf("-----------------------\n");
   printf("\n");
   
-  printf("Velocity          : %ld\n", (long) arg_vel);
   printf("Scale numerator   : %ld\n", (long) arg_scale_num);
   printf("Scale denominator : %ld\n", (long) arg_scale_denom);
   printf("Bumper            : %ld\n", (long) arg_bumper);
@@ -163,14 +160,12 @@ int main(int argc, char *argv[]) {
   printf("Constructing articulation...\n\n");
   
   pa = art_new(
-        arg_vel,
         arg_scale_num,
         arg_scale_denom,
         arg_bumper,
         arg_gap,
         1);
   
-  printf("Articulation velocity         : %d\n", art_velocity(pa));
   printf("Test input duration in quanta : %ld\n", (long) arg_test);
   printf("\n");
   
@@ -178,7 +173,7 @@ int main(int argc, char *argv[]) {
   
   result = art_transform(pa, arg_test);
   
-  printf("Test performance duration     : %ld\n", (long) result);
+  printf("Test performance subquanta    : %ld\n", (long) result);
   
   art_shutdown();
   return EXIT_SUCCESS;

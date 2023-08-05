@@ -55,13 +55,6 @@ struct ART_TAG {
   ART *pNext;
   
   /*
-   * The MIDI note-on velocity of the articulation.
-   * 
-   * Range is 1 to ART_VEL_MAX, inclusive.
-   */
-  int vel;
-  
-  /*
    * The numerator of the duration scaling factor, with an assumed
    * denominator of 8.
    * 
@@ -140,7 +133,6 @@ static ART *m_pLast = NULL;
  * art_new function.
  */
 ART *art_new(
-    int32_t vel,
     int32_t scale_num,
     int32_t scale_denom,
     int32_t bumper,
@@ -151,12 +143,6 @@ ART *art_new(
   
   if (m_shutdown) {
     raiseErr(__LINE__, "Articulation module is shut down");
-  }
-  
-  if ((vel < 1) || (vel > ART_VEL_MAX)) {
-    raiseErr(__LINE__,
-      "Articulation velocity out of range on script line %ld",
-      srcLine(lnum));
   }
   
   if ((scale_denom != 1) && (scale_denom != 2) &&
@@ -194,7 +180,6 @@ ART *art_new(
     scale_denom *= 2;
   }
   
-  pa->vel    = (int) vel;
   pa->scale  = (int) scale_num;
   pa->bumper = bumper;
   pa->gap    = gap;
@@ -230,20 +215,6 @@ void art_shutdown(void) {
     m_pFirst = NULL;
     m_pLast = NULL;
   }
-}
-
-/*
- * art_velocity function.
- */
-int art_velocity(ART *pa) {
-  if (m_shutdown) {
-    raiseErr(__LINE__, "Articulation module is shut down");
-  }
-  if (pa == NULL) {
-    raiseErr(__LINE__, NULL);
-  }
-  
-  return pa->vel;
 }
 
 /*
