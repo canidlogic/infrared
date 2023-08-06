@@ -17,6 +17,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /*
  * Type declarations
@@ -111,5 +112,22 @@ int32_t ruler_pos(RULER *pr, int32_t beat, int32_t i);
  *   the performance duration in subquanta, greater than zero
  */
 int32_t ruler_dur(RULER *pr);
+
+/*
+ * Print a textual representation of a ruler to the given output file.
+ * 
+ * This is intended for diagnostics.  The format is a pair of signed
+ * integers.  The first signed integer is the slot, and the second
+ * signed integer is the gap.
+ * 
+ * No line break is printed after the textual representation.
+ * 
+ * Parameters:
+ * 
+ *   pr - the ruler
+ * 
+ *   pOut - the file to print to
+ */
+void ruler_print(RULER *pr, FILE *pOut);
 
 #endif

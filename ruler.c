@@ -237,3 +237,19 @@ int32_t ruler_dur(RULER *pr) {
   
   return (pr->slot + pr->gap);
 }
+
+/*
+ * ruler_print function.
+ */
+void ruler_print(RULER *pr, FILE *pOut) {
+  
+  if (m_shutdown) {
+    raiseErr(__LINE__, "Ruler module is shut down");
+  }
+  if ((pr == NULL) || (pOut == NULL)) {
+    raiseErr(__LINE__, NULL);
+  }
+  
+  fprintf(pOut, "(%ld,%ld)",
+          (long) pr->slot, (long) pr->gap);
+}

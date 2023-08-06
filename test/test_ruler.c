@@ -158,6 +158,10 @@ int main(int argc, char *argv[]) {
   
   pr = ruler_new(arg_slot, arg_gap, 1);
   
+  printf("Ruler: ");
+  ruler_print(pr, stdout);
+  printf("\n\n");
+  
   printf("Test beat offset in subquanta : %ld\n", (long) arg_beat);
   printf("Test grace note index         : %ld\n", (long) arg_grace);
   printf("\n");
