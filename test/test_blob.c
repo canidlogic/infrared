@@ -19,6 +19,7 @@
  */
 
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -146,6 +147,10 @@ int main(int argc, char *argv[]) {
       raiseErr(__LINE__, NULL);
     }
   }
+  
+  printf("Base blob: ");
+  blob_print(pBase, stdout);
+  printf("\n");
   
   blob_shutdown();
   

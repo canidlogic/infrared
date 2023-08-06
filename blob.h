@@ -17,6 +17,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /*
  * Constants
@@ -181,5 +182,21 @@ const uint8_t *blob_ptr(BLOB *pb);
  *   the length of the blob data in bytes
  */
 int32_t blob_len(BLOB *pb);
+
+/*
+ * Print a textual representation of a blob to the given output file.
+ * 
+ * This is intended for diagnostics.  The format is a sequence of zero
+ * or more space-separated base-16 bytes inside angle brackets.
+ * 
+ * No line break is printed after the textual representation.
+ * 
+ * Parameters:
+ * 
+ *   pb - the blob
+ * 
+ *   pOut - the file to print to
+ */
+void blob_print(BLOB *pb, FILE *pOut);
 
 #endif

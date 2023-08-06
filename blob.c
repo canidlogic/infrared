@@ -513,3 +513,29 @@ int32_t blob_len(BLOB *pb) {
   
   return pb->blen;
 }
+
+/*
+ * blob_print function.
+ */
+void blob_print(BLOB *pb, FILE *pOut) {
+  
+  int32_t i = 0;
+  
+  if (m_shutdown) {
+    raiseErr(__LINE__, "Blob module is shut down");
+  }
+  if ((pb == NULL) || (pOut == NULL)) {
+    raiseErr(__LINE__, NULL);
+  }
+  
+  fprintf(pOut, "<");
+  
+  for(i = 0; i < pb->blen; i++) {
+    if (i > 0) {
+      fprintf(pOut, " ");
+    }
+    fprintf(pOut, "%02x", (int) (pb->buf)[i]);
+  }
+  
+  fprintf(pOut, ">");
+}
