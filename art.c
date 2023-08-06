@@ -260,3 +260,19 @@ int32_t art_transform(ART *pa, int32_t dur) {
   
   return result;
 }
+
+/*
+ * art_print function.
+ */
+void art_print(ART *pa, FILE *pOut) {
+  
+  if (m_shutdown) {
+    raiseErr(__LINE__, "Articulation module is shut down");
+  }
+  if ((pa == NULL) || (pOut == NULL)) {
+    raiseErr(__LINE__, NULL);
+  }
+  
+  fprintf(pOut, "(%d/8,%ld,%ld)",
+          pa->scale, (long) pa->bumper, (long) pa->gap);
+}

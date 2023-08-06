@@ -16,6 +16,7 @@
  */
 
 #include <stddef.h>
+#include <stdio.h>
 #include <stdint.h>
 
 /*
@@ -109,5 +110,24 @@ void art_shutdown(void);
  *   the performance duration in subquanta, greater than zero
  */
 int32_t art_transform(ART *pa, int32_t dur);
+
+/*
+ * Print a textual representation of an articulation to the given output
+ * file.
+ * 
+ * This is intended for diagnostics.  The format is a triple of one
+ * rational and two signed integers.  The rational is the multiplier,
+ * the first signed integer is the bumper, and the second signed integer
+ * is the gap.
+ * 
+ * No line break is printed after the textual representation.
+ * 
+ * Parameters:
+ * 
+ *   pa - the articulation
+ * 
+ *   pOut - the file to print to
+ */
+void art_print(ART *pa, FILE *pOut);
 
 #endif

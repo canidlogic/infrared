@@ -166,6 +166,10 @@ int main(int argc, char *argv[]) {
         arg_gap,
         1);
   
+  printf("Articulation: ");
+  art_print(pa, stdout);
+  printf("\n\n");
+  
   printf("Test input duration in quanta : %ld\n", (long) arg_test);
   printf("\n");
   
