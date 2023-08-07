@@ -219,6 +219,10 @@ int main(int argc, char *argv[]) {
   pointer_tilt(pp, arg_tilt, 5);
   pointer_moment(pp, arg_m, 6);
   
+  printf("Pointer: ");
+  pointer_print(pp, stdout);
+  printf("\n\n");
+  
   printf("Loading NMF file...\n\n");
   pd = nmf_parse_path(arg_path);
   if (pd == NULL) {

@@ -284,4 +284,24 @@ int pointer_isHeader(POINTER *pp);
  */
 int32_t pointer_compute(POINTER *pp, NMF_DATA *pd, long lnum);
 
+/*
+ * Print a textual representation of a pointer to the given output file.
+ * 
+ * This is intended for diagnostics.  Header pointers report "<header>"
+ * as their string.  All other pointers report a quintuple.  The first
+ * coordinate is the section.   The second is the offset.  The third is
+ * either "." if no grace note or a signed integer grace offset, a
+ * colon, and a printed ruler representation.  The fourth is the tilt.
+ * The fifth is either "start", "mid", or "end".
+ * 
+ * No line break is printed after the textual representation.
+ * 
+ * Parameters:
+ * 
+ *   pp - the pointer
+ * 
+ *   pOut - the file to print to
+ */
+void pointer_print(POINTER *pp, FILE *pOut);
+
 #endif

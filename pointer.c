@@ -557,3 +557,40 @@ int32_t pointer_compute(POINTER *pp, NMF_DATA *pd, long lnum) {
   
   return result;
 }
+
+/*
+ * pointer_print function.
+ */
+void pointer_print(POINTER *pp, FILE *pOut) {
+  
+  if (m_shutdown) {
+    raiseErr(__LINE__, "Pointer module is shut down");
+  }
+  if ((pp == NULL) || (pOut == NULL)) {
+    raiseErr(__LINE__, NULL);
+  }
+  
+  if (pp->head) {
+    fprintf(pOut, "<header>");
+    
+  } else {
+    fprintf(pOut, "(%ld,%ld,", (long) pp->sect, (long) pp->offs);
+    if (pp->g < 0) {
+      fprintf(pOut, "%ld:", (long) pp->g);
+      ruler_print(pp->gr, pOut);
+      fprintf(pOut, ",");
+    } else {
+      fprintf(pOut, ".,");
+    }
+    fprintf(pOut, "%ld,", (long) pp->tilt);
+    if (pp->m < 0) {
+      fprintf(pOut, "start)");
+    } else if (pp->m == 0) {
+      fprintf(pOut, "mid)");
+    } else if (pp->m > 0) {
+      fprintf(pOut, "end)");
+    } else {
+      raiseErr(__LINE__, NULL);
+    }
+  }
+}
