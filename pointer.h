@@ -46,6 +46,23 @@ typedef struct POINTER_TAG POINTER;
  */
 
 /*
+ * Initialize the pointer system.
+ * 
+ * This call is required before using any other pointer function, except
+ * for pointer_shutdown().
+ * 
+ * Provide the parsed NMF file data.  This is used only for the section
+ * table during pointer_compute().  The NMF file data should remain
+ * allocated until pointer_shutdown().  The NMF file data is NOT owned
+ * by the pointer module, and the pointer module will not release it.
+ * 
+ * Parameters:
+ * 
+ *   pd - the parsed input NMF file
+ */
+void pointer_init(NMF_DATA *pd);
+
+/*
  * Create a new pointer object.
  * 
  * Pointers always start out as header pointers.
@@ -242,9 +259,6 @@ int pointer_isHeader(POINTER *pp);
  * The given pointer must not be a header pointer or an error occurs.
  * Use pointer_isHeader() to check.
  * 
- * You must provide the parsed NMF input file so that the pointer
- * section can be decoded.
- * 
  * To compute the absolute moment offset, this function first determines
  * the absolute subquantum offset, where t=0 is the beginning of the
  * performance.  The absolute subquantum offset might be negative.  Each
@@ -282,7 +296,7 @@ int pointer_isHeader(POINTER *pp);
  * 
  *   the absolute moment offset
  */
-int32_t pointer_compute(POINTER *pp, NMF_DATA *pd, long lnum);
+int32_t pointer_compute(POINTER *pp, long lnum);
 
 /*
  * Print a textual representation of a pointer to the given output file.

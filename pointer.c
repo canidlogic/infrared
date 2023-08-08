@@ -139,6 +139,13 @@ static long srcLine(long lnum) {
  */
 
 /*
+ * Once the module is initialized, m_pd holds the parsed NMF data.
+ * 
+ * NULL if the module is not initialized or if the module is shut down.
+ */
+static NMF_DATA *m_pd = NULL;
+
+/*
  * Set to 1 if the module has been shut down.
  */
 static int m_shutdown = 0;
@@ -158,6 +165,29 @@ static POINTER *m_pLast = NULL;
  */
 
 /*
+ * pointer_init function.
+ */
+void pointer_init(NMF_DATA *pd) {
+  
+  if (m_shutdown) {
+    raiseErr(__LINE__, "Pointer module is shut down");
+  }
+  if (m_pd != NULL) {
+    raiseErr(__LINE__, "Pointer module already initialized");
+  }
+  
+  if (pd == NULL) {
+    raiseErr(__LINE__, NULL);
+  }
+  
+  if (nmf_basis(pd) != NMF_BASIS_Q96) {
+    raiseErr(__LINE__, "Input NMF has wrong quantum basis");
+  }
+  
+  m_pd = pd;
+}
+
+/*
  * pointer_new function.
  */
 POINTER *pointer_new(void) {
@@ -166,6 +196,9 @@ POINTER *pointer_new(void) {
   
   if (m_shutdown) {
     raiseErr(__LINE__, "Pointer module is shut down");
+  }
+  if (m_pd == NULL) {
+    raiseErr(__LINE__, "Pointer module not initialized");
   }
   
   pp = (POINTER *) calloc(1, sizeof(POINTER));
@@ -203,6 +236,7 @@ void pointer_shutdown(void) {
   
   if (!m_shutdown) {
     m_shutdown = 1;
+    m_pd = NULL;
     pCur = m_pFirst;
     while (pCur != NULL) {
       pNext = pCur->pNext;
@@ -220,6 +254,9 @@ void pointer_shutdown(void) {
 void pointer_reset(POINTER *pp) {
   if (m_shutdown) {
     raiseErr(__LINE__, "Pointer module is shut down");
+  }
+  if (m_pd == NULL) {
+    raiseErr(__LINE__, "Pointer module not initialized");
   }
   if (pp == NULL) {
     raiseErr(__LINE__, NULL);
@@ -240,6 +277,9 @@ void pointer_reset(POINTER *pp) {
 void pointer_jump(POINTER *pp, int32_t sect, long lnum) {
   if (m_shutdown) {
     raiseErr(__LINE__, "Pointer module is shut down");
+  }
+  if (m_pd == NULL) {
+    raiseErr(__LINE__, "Pointer module not initialized");
   }
   if (pp == NULL) {
     raiseErr(__LINE__, NULL);
@@ -268,6 +308,9 @@ void pointer_seek(POINTER *pp, int32_t offs, long lnum) {
   if (m_shutdown) {
     raiseErr(__LINE__, "Pointer module is shut down");
   }
+  if (m_pd == NULL) {
+    raiseErr(__LINE__, "Pointer module not initialized");
+  }
   if (pp == NULL) {
     raiseErr(__LINE__, NULL);
   }
@@ -289,6 +332,9 @@ void pointer_seek(POINTER *pp, int32_t offs, long lnum) {
 void pointer_advance(POINTER *pp, int32_t rel, long lnum) {
   if (m_shutdown) {
     raiseErr(__LINE__, "Pointer module is shut down");
+  }
+  if (m_pd == NULL) {
+    raiseErr(__LINE__, "Pointer module not initialized");
   }
   if (pp == NULL) {
     raiseErr(__LINE__, NULL);
@@ -330,6 +376,9 @@ void pointer_grace(POINTER *pp, int32_t g, RULER *pr, long lnum) {
   if (m_shutdown) {
     raiseErr(__LINE__, "Pointer module is shut down");
   }
+  if (m_pd == NULL) {
+    raiseErr(__LINE__, "Pointer module not initialized");
+  }
   if (pp == NULL) {
     raiseErr(__LINE__, NULL);
   }
@@ -369,6 +418,9 @@ void pointer_tilt(POINTER *pp, int32_t tilt, long lnum) {
   if (m_shutdown) {
     raiseErr(__LINE__, "Pointer module is shut down");
   }
+  if (m_pd == NULL) {
+    raiseErr(__LINE__, "Pointer module not initialized");
+  }
   if (pp == NULL) {
     raiseErr(__LINE__, NULL);
   }
@@ -387,6 +439,9 @@ void pointer_tilt(POINTER *pp, int32_t tilt, long lnum) {
 void pointer_moment(POINTER *pp, int32_t m, long lnum) {
   if (m_shutdown) {
     raiseErr(__LINE__, "Pointer module is shut down");
+  }
+  if (m_pd == NULL) {
+    raiseErr(__LINE__, "Pointer module not initialized");
   }
   if (pp == NULL) {
     raiseErr(__LINE__, NULL);
@@ -412,6 +467,9 @@ int pointer_isHeader(POINTER *pp) {
   if (m_shutdown) {
     raiseErr(__LINE__, "Pointer module is shut down");
   }
+  if (m_pd == NULL) {
+    raiseErr(__LINE__, "Pointer module not initialized");
+  }
   if (pp == NULL) {
     raiseErr(__LINE__, NULL);
   }
@@ -422,32 +480,32 @@ int pointer_isHeader(POINTER *pp) {
 /*
  * pointer_compute function.
  */
-int32_t pointer_compute(POINTER *pp, NMF_DATA *pd, long lnum) {
+int32_t pointer_compute(POINTER *pp, long lnum) {
   
   int32_t result = 0;
   
   if (m_shutdown) {
     raiseErr(__LINE__, "Pointer module is shut down");
   }
-  if ((pp == NULL) || (pd == NULL)) {
+  if (m_pd == NULL) {
+    raiseErr(__LINE__, "Pointer module not initialized");
+  }
+  if (pp == NULL) {
     raiseErr(__LINE__, NULL);
   }
   
   if (pp->head) {
     raiseErr(__LINE__, "Can't compute a header pointer");
   }
-  if (nmf_basis(pd) != NMF_BASIS_Q96) {
-    raiseErr(__LINE__, "Input NMF has wrong quantum basis");
-  }
   
-  if (pp->sect >= nmf_sections(pd)) {
+  if (pp->sect >= nmf_sections(m_pd)) {
     raiseErr(__LINE__,
               "Pointer section out of NMF range on script line %ld",
               srcLine(lnum));
   }
   
   /* Section */
-  result = nmf_offset(pd, pp->sect);
+  result = nmf_offset(m_pd, pp->sect);
   
   /* Quantum offset */
   if (pp->offs >= 0) {
@@ -565,6 +623,9 @@ void pointer_print(POINTER *pp, FILE *pOut) {
   
   if (m_shutdown) {
     raiseErr(__LINE__, "Pointer module is shut down");
+  }
+  if (m_pd == NULL) {
+    raiseErr(__LINE__, "Pointer module not initialized");
   }
   if ((pp == NULL) || (pOut == NULL)) {
     raiseErr(__LINE__, NULL);

@@ -187,6 +187,15 @@ int main(int argc, char *argv[]) {
   arg_tilt = parseInt(argv[7]);
   arg_m    = parseInt(argv[8]);
   
+  printf("Loading NMF file...\n\n");
+  pd = nmf_parse_path(arg_path);
+  if (pd == NULL) {
+    raiseErr(__LINE__, "Failed to load NMF file");
+  }
+  
+  printf("Initializing pointer system...\n\n");
+  pointer_init(pd);
+  
   printf("Pointer parameters\n");
   printf("------------------\n");
   printf("\n");
@@ -223,22 +232,16 @@ int main(int argc, char *argv[]) {
   pointer_print(pp, stdout);
   printf("\n\n");
   
-  printf("Loading NMF file...\n\n");
-  pd = nmf_parse_path(arg_path);
-  if (pd == NULL) {
-    raiseErr(__LINE__, "Failed to load NMF file");
-  }
-  
   printf("Computing pointer...\n\n");
-  result = pointer_compute(pp, pd, 7);
+  result = pointer_compute(pp, 7);
   
   printf("Computed moment offset: %ld\n", (long) result);
   
-  nmf_free(pd);
-  pd = NULL;
-  
   ruler_shutdown();
   pointer_shutdown();
+  
+  nmf_free(pd);
+  pd = NULL;
   
   return EXIT_SUCCESS;
 }
