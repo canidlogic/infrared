@@ -34,7 +34,7 @@ After all events have been added to the moment buffer, the lower boundary of the
 
 In order to manually control the time point zero and the full duration of the track, you can use null events (defined later).  Null events update the event range but do not actually add any event to the track.  If you put a null event somewhere before all other events in the moment buffer, that null event will become time point zero.  If you put a null event somewhere after all other events in the moment buffer, that null event will become the End Of Track position.
 
-The event range is also used by the tracking algorithm to determine controller change messages, as described in the documentation about graphs.  Controller change messages are always inserted within the event range, so they will never change the event range themselves.
+The event range is also used by the tracking algorithm to determine controller change messages, as described in the documentation about graphs.  Controller change messages always use the event range as boundaries for the tracking algorithm, so the inserted events will never change the event range themselves.
 
 ### Moment sorting
 

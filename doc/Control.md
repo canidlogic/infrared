@@ -84,4 +84,4 @@ The _pitch bend controllers_ use Pitch Bend messages.
 
 Each channel has its own version of these controllers, so the channel must be indicated when selecting the controller.
 
-Graphs can be associated with any of these controller types supported by the MIDI standard.  If a controller for a specific channel has a graph, then it will be set at the start of the performance using a time query to the graph object, and then changes in value will be determined by the tracking algorithm described in the graph documentation.
+Graphs can be associated with any of these controller types supported by the MIDI standard.  If a controller for a specific channel has a graph, then the tracking algorithm described in the graph documentation will be used with time boundaries equal to the event range defined by the MIDI output module to generate all the necessary changes in value.
