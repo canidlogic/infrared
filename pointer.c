@@ -655,3 +655,93 @@ void pointer_print(POINTER *pp, FILE *pOut) {
     }
   }
 }
+
+/*
+ * pointer_unpack function.
+ */
+int32_t pointer_unpack(int32_t m, int *pPart) {
+  
+  int32_t s = 0;
+  int32_t p = 0;
+  
+  if (m >= 0) {
+    s = m / 3;
+    p = m % 3;
+    
+  } else if (m <= INT32_MIN) {
+    s = -715827883;
+    p = 1;
+  
+  } else if ((m < 0) && (m > INT32_MIN)) {
+    s = (0 - ((0 - m) / 3)) - 1;
+    p = 3 - ((0 - m) % 3);
+    if (p >= 3) {
+      p = 0;
+      s++;
+    }
+    
+  } else {
+    raiseErr(__LINE__, NULL);
+  }
+  
+  if (pPart != NULL) {
+    *pPart = (int) p;
+  }
+  
+  return s;
+}
+
+/*
+ * pointer_pack function.
+ */
+int32_t pointer_pack(int32_t s, int p) {
+  
+  int32_t result = 0;
+
+  if ((p < 0) || (p > 2)) {
+    raiseErr(__LINE__, NULL);
+  }
+  
+  if ((s > -715827883) && (s < 715827882))  {
+    result = s * 3 + ((int32_t) p);
+  
+  } else if (s == 715827882) {
+    if (p == 0) {
+      result = INT32_MAX - 1;
+    
+    } else if (p == 1) {
+      result = INT32_MAX;
+      
+    } else if (p == 2) {
+      raiseErr(__LINE__, "Overflow while computing moment offset");
+      
+    } else {
+      raiseErr(__LINE__, NULL);
+    }
+    
+  } else if (s == -715827883) {
+    if (p == 0) {
+      raiseErr(__LINE__, "Overflow while computing moment offset");
+      
+    } else if (p == 1) {
+      result = INT32_MIN;
+      
+    } else if (p == 2) {
+      result = INT32_MIN + 1;
+      
+    } else {
+      raiseErr(__LINE__, NULL);
+    }
+    
+  } else if (s > 715827882) {
+    raiseErr(__LINE__, "Overflow while computing moment offset");
+    
+  } else if (s < -715827883) {
+    raiseErr(__LINE__, "Overflow while computing moment offset");
+    
+  } else {
+    raiseErr(__LINE__, NULL);
+  }
+  
+  return result;
+}

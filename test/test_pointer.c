@@ -154,6 +154,9 @@ int main(int argc, char *argv[]) {
   int32_t arg_m = 0;
   
   int32_t result = 0;
+  int32_t x = 0;
+  int32_t y = 0;
+  int i = 0;
   
   RULER *pr = NULL;
   POINTER *pp = NULL;
@@ -237,11 +240,37 @@ int main(int argc, char *argv[]) {
   
   printf("Computed moment offset: %ld\n", (long) result);
   
+  printf("\n");
+  
+  printf("Testing pointer conversion...\n\n");
+  
+  for(x = INT32_MIN; x < INT32_MIN + 64; x++) {
+    y = pointer_unpack(x, &i);
+    if (pointer_pack(y, i) != x) {
+      raiseErr(__LINE__, "Pointer test failed");
+    }
+  }
+  
+  for(x = -32; x < 33; x++) {
+    y = pointer_unpack(x, &i);
+    if (pointer_pack(y, i) != x) {
+      raiseErr(__LINE__, "Pointer test failed");
+    }
+  }
+  
+  for(x = INT32_MAX; x > INT32_MAX - 64; x--) {
+    y = pointer_unpack(x, &i);
+    if (pointer_pack(y, i) != x) {
+      raiseErr(__LINE__, "Pointer test failed");
+    }
+  }
+  
   ruler_shutdown();
   pointer_shutdown();
   
   nmf_free(pd);
   pd = NULL;
   
+  diagnostic_log("Test successful");
   return EXIT_SUCCESS;
 }

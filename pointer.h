@@ -318,4 +318,44 @@ int32_t pointer_compute(POINTER *pp, long lnum);
  */
 void pointer_print(POINTER *pp, FILE *pOut);
 
+/*
+ * Unpack a moment offset into the component subquantum offset and
+ * moment part.  The moment part will be zero for start-of-moment, one
+ * for middle-of-moment, or two for end-of-moment.
+ * 
+ * This function can be used even when the pointer module is shut down
+ * or not initialized.
+ * 
+ * Parameters:
+ * 
+ *   m - the moment offset to unpack
+ * 
+ *   pPart - integer to receive the moment part, or NULL if not required
+ * 
+ * Return:
+ * 
+ *   the subquantum offset
+ */
+int32_t pointer_unpack(int32_t m, int *pPart);
+
+/*
+ * Pack a subquantum offset and a moment part into a moment offset.  The
+ * moment part is zero for start-of-moment, one for middle-of-moment, or
+ * two for end-of-moment.
+ * 
+ * This function can be used even when the pointer module is shut down
+ * or not initialized.
+ * 
+ * Parameters:
+ * 
+ *   s - the subquantum  offset
+ * 
+ *   p - the moment part
+ * 
+ * Return:
+ * 
+ *   the moment offset
+ */
+int32_t pointer_pack(int32_t s, int p);
+
 #endif
