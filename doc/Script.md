@@ -87,24 +87,55 @@ Pointer types are objects, and furthermore they are mutable.
 
 Infrared scripts are run in the context of _interpreter state._  The interpreter state always starts out in the same initial state.  The Infrared script then makes modifications to this initial state.  At the end of the Infrared script, the final interpreter state is then the state that is used to transform the input NMF file into an output MIDI file.
 
-### NMF sections
+The interpreter state is divided into the following specific groups:
 
-The input NMF object must be loaded into memory before interpretation, but during script interpretation the only relevant data is the section table.  The section table is needed so that pointer data types can be properly computed as time offsets.
+1. Core state
+2. Pointer state
+3. Diagnostic state
+4. Rendering state
 
-### MIDI output system
+The _core state_ are those parts of interpreter state that are required for the Shastina interpreter to work.
 
-The MIDI output system state is described in detail in separate documentation.  For the purpose of Infrared scripts, the header and moment buffers are the relevant pieces of state.  Manual events can be scheduled in the Infrared script in both buffers.  Both buffers start empty.
+The _pointer state_ allows pointer objects to be computed against the input NMF file.
 
-After the script completes, note events transformed from the input NMF file will be added to the moment buffer automatically using the process described in the separate documentation about note rendering.  Automatic control messages will also be added to the moment buffer using the process described in the separate documentation about the control system.
+The _diagnostic state_ allows the Infrared script to print diagnostic messages.
 
-### Note rendering system
+The _rendering state_ allows the Infrared script to control the details of how the input NMF file will be transformed into the output MIDI file.
 
-The note rendering system is described in detail in separate documentation.  For the purpose of Infrared scripts, the pipelines are the relevant pieces of state.  The Infrared script may add classifiers to each of the pipelines, which start out empty with no classifiers.  These classifiers then affect how NMF note events are transformed into MIDI note events.
+The following subsections describe these state groups in further detail.
 
-### Control system
+### Core state
 
-The control system is described in detail in separate documentation.
+The core interpreter state consists of the interpreter stack and the memory bank storing variables and constants.
 
-Manual events are directly inserted into the header or moment buffer, which is part of the MIDI output system.
+Both the stack and memory bank store data values in a _variant_ type that can hold any of the data types specified earlier.  The stack supports the grouping system specified by Shastina.  At the end of script interpretation, the interpreter stack must be empty.
 
-The control system also has a tempo graph and controller graphs.  The tempo graph is a reference to a graph object that controls the tempo throughout the performance.  The controller graphs can associate graph objects with specific controllers.  For both the tempo and controller graphs, Infrared will automatically generate all the necessary controller messages to track changes in values, as described in the separate documentation.
+The core state is fundamental during script interpretation, but following completion of interpretation, the core state is no longer relevant.
+
+### Pointer state
+
+The pointer state is loaded with the parsed NMF data at the start of interpretation.  This is necessary for the NMF section table, which is required for pointer objects to be computed into moment offsets during script interpretation.
+
+Pointer state is read-only in that the parsed NMF data can not be changed during script interpretation.  Following the completion of script interpretation, the pointer state is no longer relevant since all relevant pointers will have been converted to moment offsets or header pointers by that point.
+
+### Diagnostic state
+
+The diagnostic state provides two output functions.  The first prints the value of any data type to standard error.  Printing a string will simply print whatever text is stored within the string object.  The second output function adds a line break to standard error.
+
+The diagnostic state also includes a newline flag.  The newline flag starts out set.  When a data object is printed to standard error, the newline flag is checked.  If the newline flag is set, then the name of the executable module, a colon, and a space will be printed before printing the data object value.  This ensures that all non-blank lines printed to standard error will have a header indicating where the message is from.
+
+The newline flag is always cleared after printing a data value, and always set after printing a line break.  If at the end of script interpretation the newline flag is clear, a line break will automatically be printed to standard error to close the last diagnostic line.
+
+### Rendering state
+
+The rendering state receives instructions from the Infrared script that determine how the NMF will be rendered to MIDI.  This is implemented as an internal API that has multiple implementations.
+
+There are three implementations of the rendering API.  The _default implementation_ simply discards all instructions received from the Infrared script.  The _diagnostic implementation_ prints diagnostic log messages that report all received instructions to standard error.  The _full implementation_ actually configures the Infrared rendering system with the received instructions.
+
+The default and diagnostic implementations are useful for debugging Infrared scripts.  However, Infrared will only actually render NMF to MIDI if the full implementation is chosen.
+
+The first part of the API allows manual events to be scheduled in the moment or header buffers.  See the control system documentation for further information.
+
+The second part of the API allows graph objects to be attached to various kinds of controllers allowed by the control system.
+
+The third part of the API allows classifiers to be added to the note rendering pipelines.  See the note rendering documentation for further information.
