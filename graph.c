@@ -1087,6 +1087,21 @@ static int32_t graphSeek(GRAPH *pg, int32_t t) {
  */
 
 /*
+ * graph_constant function.
+ */
+GRAPH *graph_constant(int32_t v, long lnum) {
+  if (m_shutdown) {
+    raiseErr(__LINE__, "Graph module is shut down");
+  }
+  if (v < 0) {
+    raiseErr(__LINE__,
+      "Graph values must be zero or greater on script line %ld",
+      srcLine(lnum));
+  }
+  return cache_get(v);
+}
+
+/*
  * graph_begin function.
  */
 void graph_begin(long lnum) {

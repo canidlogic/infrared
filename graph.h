@@ -64,6 +64,33 @@ typedef void (*graph_fp_track)(
  */
 
 /*
+ * Directly get a new graph object that has the given constant value at
+ * all time points.
+ * 
+ * The accumulator is bypassed by this function, so there may or may not
+ * be a graph object definition in progress.  It has no effect on this
+ * function.
+ * 
+ * The graph object that is constructed is no different than the graph
+ * object that would have been constructed in the accumulator using a
+ * single constant region.  This separate function is necessary for
+ * internal use in the render module, which must be able to construct a
+ * default graph regardless of the graph accumulator state.
+ * 
+ * The constant value can be any value zero or greater.
+ * 
+ * The given lnum should be from the Shastina parser, and it is used for
+ * error reports if necessary.
+ * 
+ * Parameters:
+ * 
+ *   v - the constant value of the graph
+ * 
+ *   lnum - the Shastina line number for diagnostic messages
+ */
+GRAPH *graph_constant(int32_t v, long lnum);
+
+/*
  * Begin the definition of a new graph object.
  * 
  * There must not already be a graph object definition in progress or an
