@@ -170,6 +170,6 @@ The Note-On event occurs at the subquantum offset given in the Infrared event, c
 
 The Note-Off event occurs at the subquantum offset plus the subquantum duration, converted to a moment offset with start-of-moment moment part.  The MIDI channel and MIDI key number match the fields within the Infrared event.  The velocity is determined by the release velocity of the Infrared event.  If the release velocity has the special value, a Note-On event with a velocity of zero is used instead of a Note-Off event.
 
-If the aftertouch enable flag is set for the Infrared event, then the tracking algorithm described in the graph documentation is used to generate Polyphonic Key Pressure (Aftertouch) events.  The tracking algorithm has its time range limited to the subquantum after the note-on event up to and including the subquantum before the note-off event, with the middle-of-moment moment part used in both cases.  The graph values must be in range 1 to 127 inclusive.
+If the aftertouch enable flag is set for the Infrared event, then the tracking algorithm described in the graph documentation is used to generate Polyphonic Key Pressure (Aftertouch) events.  The tracking algorithm has its time range limited to the subquantum after the note-on event up to and including the subquantum before the note-off event.  The graph values must be in range 1 to 127 inclusive.  The moment part matches exactly whenever the values change in the graph that is being tracked.
 
 Each MIDI message is then added to the moment buffer described in the MIDI output module documentation.
