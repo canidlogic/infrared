@@ -2184,6 +2184,8 @@ void midi_compile(FILE *pOut) {
   uint32_t sel = 0;
   uint32_t prev_sel = 0;
   int32_t i = 0;
+  int32_t t = 0;
+  int32_t prev_t = 0;
   int32_t len = 0;
   int32_t mlen = 0;
   int32_t dlen = 0;
@@ -2214,9 +2216,11 @@ void midi_compile(FILE *pOut) {
    * delta time from previous event */
   for(i = 0; i < m_moment_len; i++) {
     (m_moment[i]).t = pointer_unpack((m_moment[i]).t, NULL) - m_lower;
+    t = (m_moment[i]).t;
     if (i > 0) {
-      (m_moment[i]).t = (m_moment[i]).t - (m_moment[i - 1]).t;
+      (m_moment[i]).t = t - prev_t;
     }
+    prev_t = t;
   }
   
   /* Compute the length of the MIDI track by first computing the encoded
