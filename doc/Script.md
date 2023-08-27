@@ -36,7 +36,7 @@ The _articulation_ data type is an object that determines how the notated durati
 
 ### Ruler
 
-The _ruler_ data type is an object that determines how unmeasured grace notes are transformed into a performance time offset and a performance duration.  It is spercified in the note rendering documentation.  Rulers are immutable after definition.
+The _ruler_ data type is an object that determines how unmeasured grace notes are transformed into a performance time offset and a performance duration.  It is specified in the note rendering documentation.  Rulers are immutable after definition.
 
 ### Pointer
 
@@ -91,12 +91,15 @@ The interpreter state is divided into the following specific groups:
 
 1. Core state
 2. Pointer state
-3. Diagnostic state
-4. Rendering state
+3. Ruler stack
+4. Diagnostic state
+5. Rendering state
 
 The _core state_ are those parts of interpreter state that are required for the Shastina interpreter to work.
 
 The _pointer state_ allows pointer objects to be computed against the input NMF file.
+
+The _ruler stack_ is used to track which ruler is assigned to grace note pointers.
 
 The _diagnostic state_ allows the Infrared script to print diagnostic messages.
 
@@ -118,24 +121,103 @@ The pointer state is loaded with the parsed NMF data at the start of interpretat
 
 Pointer state is read-only in that the parsed NMF data can not be changed during script interpretation.  Following the completion of script interpretation, the pointer state is no longer relevant since all relevant pointers will have been converted to moment offsets or header pointers by that point.
 
+### Ruler stack
+
+The ruler stack is a stack of ruler objects that is used during interpretation.  It starts out empty.  It does not need to be empty at the end of interpretation (unlike the main interpreter stack).
+
+The _current ruler_ is determined by the ruler stack in the following way.  If the ruler stack is not empty, then the current ruler is whichever ruler is on top of the ruler stack.  If the ruler stack is empty, then the current ruler is a default ruler that has a slot of 48 subquanta and a gap of zero.
+
+Infrared operations are provided to push and pop rulers from the ruler stack.  The current ruler is used for numeric literals suffixed with `g` to determine the ruler applied to grace note offsets.
+
 ### Diagnostic state
 
 The diagnostic state provides two output functions.  The first prints the value of any data type to standard error.  Printing a string will simply print whatever text is stored within the string object.  The second output function adds a line break to standard error.
 
-The diagnostic state also includes a newline flag.  The newline flag starts out set.  When a data object is printed to standard error, the newline flag is checked.  If the newline flag is set, then the name of the executable module, a colon, and a space will be printed before printing the data object value.  This ensures that all non-blank lines printed to standard error will have a header indicating where the message is from.
+The diagnostic state also includes a newline flag.  The newline flag starts out set.  When a data object is printed to standard error, the newline flag is checked.  If the newline flag is set, then a header will be printed at the start of the line identifying the name of the executable module and the line number in the script.  This ensures that all non-blank lines printed to standard error will have a header indicating where the message is from.
 
 The newline flag is always cleared after printing a data value, and always set after printing a line break.  If at the end of script interpretation the newline flag is clear, a line break will automatically be printed to standard error to close the last diagnostic line.
 
 ### Rendering state
 
-The rendering state receives instructions from the Infrared script that determine how the NMF will be rendered to MIDI.  This is implemented as an internal API that has multiple implementations.
+The rendering state receives instructions from the Infrared script that determine how the NMF will be rendered to MIDI.
 
-There are three implementations of the rendering API.  The _default implementation_ simply discards all instructions received from the Infrared script.  The _diagnostic implementation_ prints diagnostic log messages that report all received instructions to standard error.  The _full implementation_ actually configures the Infrared rendering system with the received instructions.
+The internal API that scripts use for setting the rendering state is contained in the `control.h` and `render.h` headers.  However, the `render_nmf()` and `control_track()` functions are not directly accessible from Infrared scripts.
 
-The default and diagnostic implementations are useful for debugging Infrared scripts.  However, Infrared will only actually render NMF to MIDI if the full implementation is chosen.
+This rendering state allows classifiers to be registered that control how NMF notes are translated into Infrared notes.  It also allows certain events to be manually inserted.  Finally, it allows graphs to be associated with specific controllers, which will then be automatically controlled by Infrared so that they track the graphs.
 
-The first part of the API allows manual events to be scheduled in the moment or header buffers.  See the control system documentation for further information.
+## Header line
 
-The second part of the API allows graph objects to be attached to various kinds of controllers allowed by the control system.
+The first Shastina entities in an Infrared script must be the start of a metacommand, the metacommand token `infrared` (case sensitive), and the end of a metacommand.  In other words, the header looks like this:
 
-The third part of the API allows classifiers to be added to the note rendering pipelines.  See the note rendering documentation for further information.
+    %infrared;
+
+If there are other entities in this header metacommand after the initial `infrared` token, the Infrared interpreter assumes the script is for an unsupported future version of Infrared and stops on an error.
+
+## Entity interpretation
+
+The following subsections describe how Infrared interprets the different kinds of Shastina entities that it supports.
+
+### Numeric entities
+
+Shastina numeric entities function differently in Infrared scripts depending on whether they have a single-letter suffix.  All numeric entities begin with an optional sign character, followed by a sequence of one or more decimal digits, and then an optional single-letter suffix, which is case-sensitive.  The range of signed decimal values always matches the range of an Infrared integer described earlier.
+
+If there is no single-letter suffix, then the numeric entity has the effect of pushing an integer value on top of the interpreter stack.
+
+If there is a single-letter suffix, then there must be a pointer object on top of the stack.  The entity literal will modify the location of that pointer object and leave it on top of the stack.  No integer is pushed on top of the stack in this case.
+
+The following single-letter suffixes are supported:
+
+- `s` : Jump to a section
+- `q` : Seek to a specific quantum offset
+- `r` : Seek relative to current quantum offset
+- `g` : Set a grace note offset
+- `t` : Tilt by a subquantum offset
+- `m` : Set the moment part
+
+The `s` suffix is the only kind that can be applied to a header pointer.  All other suffixes require the pointer to be a non-header pointer.
+
+Using the `s` suffix will jump to the start of the indicated NMF section and reset all other pointer fields except for the moment part.  If the `s` suffix is used on a header pointer, it will be converted into a non-header pointer and its moment part will be initialized to middle-of-moment.
+
+The `q` and `r` suffixes change the quantum offset within the selected NMF section.  `q` sets an absolute offset, while `r` changes the current offset by a signed, relative amount.  Both suffixes clear the grace note offset and tilt to zero.
+
+The `g` suffix sets a specific grace note offset.  If it is zero, then the pointer is on the beat and not a grace note.  Otherwise, it must be less than zero.  -1 selects the grace note immediately before the beat, -2 selects the grace note immediately before that, and so forth.  The ruler used for computing grace note offsets is determined by the current ruler of the ruler stack at the time that the `g` suffix is invoked.  The `g` suffix clears the tilt to zero.
+
+The `t` suffix sets a subquantum offset that will be applied after everything else is computed.
+
+Finally, the `m` suffix determines the moment part of the pointer.  It must be either `-1m` for start of moment, `0m` for middle of moment, or `1m` for end of moment.
+
+### String entities
+
+Shastina string entities cause either a text object or a blob object to be constructed and pushed on top of the interpreter stack.
+
+If the string entity uses double quotes, then an Infrared text object will be constructed and pushed on top of the stack.  Only visible, printing ASCII characters and the space are allowed.
+
+The backslash character is used for escape sequences within text literals.  Backslash followed by another backslash is the escape for a literal backslash.  Backslash followed by double quote is the escape for a literal double quote.  No other escape sequences are supported.
+
+If the string entity uses curly braces, then an Infrared blob object will be constructed and pushed on top of the stack.  The binary data is encoded in base-16 using either lowercase or uppercase (or both) letters.  Pairs of base-16 digits forming individual bytes must not have any separation.  However, whitespace separation including space, tab, and line breaks are optional and allowed everywhere except within a digit pair.
+
+Neither string entity type allows for prefixes to the opening quote or curly brace.
+
+### Memory entities
+
+Infrared supports the Shastina entities that allow variables and constants to be declared, and also the entities for getting the value of variables and constants, and setting the value of variables.
+
+Variable and constant names must be sequences of one up to 31 ASCII alphanumerics and underscores, where the first character must be a letter.  Names are case sensitive, and both variables and constants share the same name space.  Variables and constants must be declared before they can be used.  The declaration pops a value off the top of the interpreter stack to use as the initial value.  Any of the Infrared data types may be stored in variables and constants.
+
+Note that pointer objects are mutable, so if a pointer is stored in a constant and then modified separately, the pointer value in the constant changes also.  To prevent this, a new pointer should be made and copy the original pointer value, so that changes will not cascade to the memory value.
+
+The Shastina "get" entity can be used to push a copy of any variable or constant on top of the interpreter stack.  The Shastina "assign" entity can be used to pop a new value from the top of the interpreter stack and overwrite the current value assigned to a variable.  The "assign" entity is not allowed to be used with constants.
+
+### Grouping entities
+
+Infrared supports the Shastina grouping entities.  Beginning a group hides everything currently on the interpreter stack.  Ending a group requires there to be exactly one non-hidden element on the interpreter stack.  The hidden elements are then restored.  Groups may be nested.
+
+Infrared also supports Shastina array entities.  Shastina creates implicit groups for each array element, except in the special case of an empty array.  At the end, Infrared pushes the count of array elements onto the interpreter stack as an integer value.
+
+### Operation entities
+
+Shastina operation entities cause the Infrared interpreter to perform various operations.  These operations can pop elements off the interpreter stack for input, push elements onto the interpreter stack for output, and make modifications to the ruler stack, diagnostic state, and rendering state.
+
+Infrared uses an internal registry module that stores a mapping of case-sensitive operation names to functions that perform the operation.  Operations are then packaged into operation modules.  The operation modules each have a registration function that registers each of their operations with the internal registry.  In the main Infrared module, each of the registration functions of the various operation modules are invoked at the beginning of execution to register all the operations.
+
+The operation modules are documented separately.
