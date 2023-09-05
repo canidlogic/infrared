@@ -8,6 +8,8 @@
  * documentation for specifications of the operations.
  */
 
+#include "op_base.h"
+
 #include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
