@@ -24,7 +24,7 @@
  *   - core.c
  *   - diagnostic.c
  *   - main.c
- *   - primtive.c
+ *   - primitive.c
  */
 
 void op_base_register(void);
