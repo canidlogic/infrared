@@ -45,6 +45,7 @@
  * Infrared has the following operation modules:
  * 
  *   - op_base.c
+ *   - op_string.c
  * 
  * Infrared requires the following external libraries:
  * 
@@ -76,6 +77,7 @@
 #include "text.h"
 
 #include "op_base.h"
+#include "op_string.h"
 
 #include "nmf.h"
 #include "rfdict.h"
@@ -111,6 +113,7 @@ static void sayWarn(int lnum, const char *pDetail, ...) {
  */
 static void registerModules(void) {
   op_base_register();
+  op_string_register();
 }
 
 /*
