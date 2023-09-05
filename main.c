@@ -42,6 +42,10 @@
  *   - set.c
  *   - text.c
  * 
+ * Infrared has the following operation modules:
+ * 
+ *   - op_base.c
+ * 
  * Infrared requires the following external libraries:
  * 
  *   - libnmf
@@ -70,6 +74,8 @@
 #include "ruler.h"
 #include "set.h"
 #include "text.h"
+
+#include "op_base.h"
 
 #include "nmf.h"
 #include "rfdict.h"
@@ -104,7 +110,7 @@ static void sayWarn(int lnum, const char *pDetail, ...) {
  * the operations are registered with this main module.
  */
 static void registerModules(void) {
-  /* @@TODO: */
+  op_base_register();
 }
 
 /*
@@ -845,7 +851,7 @@ void main_stop(long lnum) {
   }
   
   fprintf(stderr,
-    "\n%s: [Stopped on script line %ld]\n", srcLine(lnum));
+    "\n%s: [Stopped on script line %ld]\n", pModule, srcLine(lnum));
   exit(EXIT_FAILURE);
 }
 
