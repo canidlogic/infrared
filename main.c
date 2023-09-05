@@ -46,6 +46,7 @@
  * 
  *   - op_base.c
  *   - op_construct.c
+ *   - op_graph.c
  *   - op_string.c
  * 
  * Infrared requires the following external libraries:
@@ -79,6 +80,7 @@
 
 #include "op_base.h"
 #include "op_construct.h"
+#include "op_graph.h"
 #include "op_string.h"
 
 #include "nmf.h"
@@ -117,6 +119,7 @@ static void registerModules(void) {
   op_base_register();
   op_string_register();
   op_construct_register();
+  op_graph_register();
 }
 
 /*
