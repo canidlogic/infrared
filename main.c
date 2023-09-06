@@ -48,6 +48,7 @@
  *   - op_construct.c
  *   - op_control.c
  *   - op_graph.c
+ *   - op_render.c
  *   - op_set.c
  *   - op_string.c
  * 
@@ -84,6 +85,7 @@
 #include "op_construct.h"
 #include "op_control.h"
 #include "op_graph.h"
+#include "op_render.h"
 #include "op_set.h"
 #include "op_string.h"
 
@@ -126,6 +128,7 @@ static void registerModules(void) {
   op_graph_register();
   op_set_register();
   op_control_register();
+  op_render_register();
 }
 
 /*
