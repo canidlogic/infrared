@@ -55,6 +55,27 @@ For the division operation, the division is performed in floating-point space an
 
 Take an integer from the stack and push its inverse, such that adding `a` and `b` together results in the value of zero.  Positive values greater than zero become negative, negative values become positive, and zero is unchanged.
 
+    [p:Pointer] [i:Integer] s [p:Pointer]
+    [p:Pointer] [i:Integer] q [p:Pointer]
+    [p:Pointer] [i:Integer] r [p:Pointer]
+    [p:Pointer] [i:Integer] g [p:Pointer]
+    [p:Pointer] [i:Integer] t [p:Pointer]
+    [p:Pointer] [i:Integer] m [p:Pointer]
+
+Pointer arithmetic operations.  Each of these operations is equivalent to the numeric suffix documented in the script specification, except these operations allow the integer to be a separate entity.  This is useful when computations need to be performed on the integer.
+
+    [p:Pointer] reset [p:Pointer]
+
+Reset a pointer to a header pointer.
+
+    [numerator:Integer]
+    [denominator:Integer]
+    [unit:Integer] bpm [tempo:Integer]
+
+Compute a tempo value using the familiar measurement of beats per minute (BPM).  The numerator and denominator describe the BPM value as a rational integer.  Both must be greater than zero.  If you just need an integer BPM value, use a denominator of one.  The unit parameter indicates the rhythmic unit that gets the beat, expressed in units of 1/24 of a quarter note (which is the same as for the time signature operation).  Use 24 as the unit for quarter note beats, 48 for half note beats, 36 for dotted quarter note beats, 18 for dotted eighth note beats, and so forth.
+
+The result of this operation is an integer expressing the number of microseconds per quarter note that approximates the given beats per minute.  This can then be used as graph values in tempo graphs.
+
 ## String operations
 
     [e1:Blob|Text] [e2:Blob|Text] ... [e_n:Blob|Text]
@@ -92,10 +113,6 @@ Rulers position unmeasured grace notes in the NMF input.  The `slot` refers to h
     - ptr [p:Pointer]
 
 Construct a new pointer object and push it onto the stack.  The pointer starts out as a header pointer.
-
-    [p:Pointer] reset [p:Pointer]
-
-Pop a pointer off the stack, reset it to a header pointer, and push it back on the stack.  For other kinds of pointer modifications, use the suffixed numeric operations documented in the script specification.
 
 ## Graph construction operations
 

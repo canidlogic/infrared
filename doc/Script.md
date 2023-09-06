@@ -186,6 +186,8 @@ The `t` suffix sets a subquantum offset that will be applied after everything el
 
 Finally, the `m` suffix determines the moment part of the pointer.  It must be either `-1m` for start of moment, `0m` for middle of moment, or `1m` for end of moment.
 
+Operations are also provided that perform the same pointer arithmetic as these suffixes.  This is useful when computations need to be performed on the integers.  See the separate operations specification for further information.
+
 ### String entities
 
 Shastina string entities cause either a text object or a blob object to be constructed and pushed on top of the interpreter stack.
