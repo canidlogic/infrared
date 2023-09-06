@@ -19,12 +19,17 @@
  * Requirements
  * ------------
  * 
+ * May require the <math.h> library with -lm
+ * 
  * Requires the following Infrared modules:
  * 
  *   - core.c
  *   - diagnostic.c
  *   - main.c
+ *   - midi.c
+ *   - pointer.c
  *   - primitive.c
+ *   - ruler.c
  */
 
 void op_base_register(void);

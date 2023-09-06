@@ -95,16 +95,6 @@ static void op_ptr(void *pCustom, long lnum) {
   core_push_p(pointer_new(), lnum);
 }
 
-static void op_reset(void *pCustom, long lnum) {
-  POINTER *pp = NULL;
-  
-  (void) pCustom;
-  
-  pp = core_pop_p(lnum);
-  pointer_reset(pp);
-  core_push_p(pp, lnum);
-}
-
 /*
  * Registration function
  * =====================
@@ -114,5 +104,4 @@ void op_construct_register(void) {
   main_op("art", &op_art, NULL);
   main_op("ruler", &op_ruler, NULL);
   main_op("ptr", &op_ptr, NULL);
-  main_op("reset", &op_reset, NULL);
 }
